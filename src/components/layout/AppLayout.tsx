@@ -43,12 +43,22 @@ export const AppLayout: React.FC = () => {
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 font-sans antialiased">
       {/* Global Enterprise Top Navigation Bar */}
-      <nav className="relative z-30 grid h-15 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-b border-slate-800 bg-slate-900 px-3 text-white shadow-sm sm:px-6">
-        {/* Brand Logo & Platform Title */}
-        <div className="flex min-w-0 items-center justify-self-start">
+      <nav className="relative z-30 grid h-15 shrink-0 grid-cols-[1fr_44px] items-center border-b border-slate-800 bg-slate-900 px-2 text-white shadow-sm lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-2 lg:px-6">
+        {/* Mobile Menu + Brand / Desktop Brand */}
+        <div className="flex min-w-0 items-center gap-2 justify-self-start">
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800 text-slate-200 hover:bg-slate-700 lg:hidden"
+            aria-expanded={mobileMenuOpen}
+            aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+          >
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+
           <Link
             to="/"
-            className="group flex min-w-0 items-center gap-2.5 select-none"
+            className="group flex min-w-0 items-center gap-2 select-none lg:gap-2.5"
           >
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-500 text-white shadow-xs transition-colors group-hover:bg-indigo-400">
               <Scale className="w-4 h-4" />
@@ -69,9 +79,32 @@ export const AppLayout: React.FC = () => {
           </Link>
         </div>
 
-        {/* Centered Navigation */}
-        <div className="relative justify-self-center">
-          <div className="hidden items-center gap-1 md:flex">
+        {mobileMenuOpen && (
+          <div className="fixed left-2 top-[60px] z-50 w-56 rounded-xl border border-slate-700 bg-slate-900 p-2 shadow-lg lg:hidden">
+            {navItems.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.exact}
+                onClick={() => setMobileMenuOpen(false)}
+                className={({ isActive }) =>
+                  `flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+                    isActive
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                  }`
+                }
+              >
+                <item.icon className="h-4 w-4" />
+                <span>{item.label}</span>
+              </NavLink>
+            ))}
+          </div>
+        )}
+
+        {/* Desktop Centered Navigation */}
+        <div className="relative hidden justify-self-center lg:block">
+          <div className="hidden items-center gap-1 lg:flex">
             {navItems.map((item) => (
               <NavLink
                 key={item.to}
@@ -91,39 +124,6 @@ export const AppLayout: React.FC = () => {
             ))}
           </div>
 
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="flex items-center gap-1.5 rounded-lg bg-slate-800 px-2.5 py-1.5 text-sm font-semibold text-slate-200 hover:bg-slate-700 md:hidden"
-            aria-expanded={mobileMenuOpen}
-            aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-          >
-            {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-            <span>Menu</span>
-          </button>
-
-          {mobileMenuOpen && (
-            <div className="absolute left-1/2 top-full z-50 mt-2 w-56 -translate-x-1/2 rounded-xl border border-slate-700 bg-slate-900 p-2 shadow-lg md:hidden">
-              {navItems.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  end={item.exact}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
-                      isActive
-                        ? 'bg-indigo-600 text-white'
-                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                    }`
-                  }
-                >
-                  <item.icon className="h-4 w-4" />
-                  <span>{item.label}</span>
-                </NavLink>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Reviewer Profile */}

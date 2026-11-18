@@ -24,6 +24,7 @@ import { calculateRiskAnalytics } from '../utils/riskCalculator';
 export const ReportsPage: React.FC = () => {
   const { contract, findings, reviews } = useReviewStore();
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState('');
 
   const analytics = useMemo(() => {
     return calculateRiskAnalytics(contract, findings, reviews);
@@ -58,7 +59,7 @@ export const ReportsPage: React.FC = () => {
   }, [analytics]);
 
   // Export handlers
-  const handleCopyMarkdown = () => {
+  const handleCopyMarkdown = async () => {
     let md = `# Northwind Analytics — AI Document Review Audit Report\n\n`;
     md += `**Document:** ${contract.title}\n`;
     md += `**Parties:** ${contract.parties[0]?.name} (Customer) & ${contract.parties[1]?.name} (Vendor)\n`;
@@ -70,12 +71,23 @@ export const ReportsPage: React.FC = () => {
     md += `## Accepted Amendments\n\n`;
     acceptedFindings.forEach((f) => {
       md += `### [${f.id}] § ${f.anchor ? f.anchor.paragraphId.replace('p-', '') : 'Doc-Wide'} — ${f.title}\n`;
-      if (f.suggestedEdit) md += `**Agreed Amendment:** "${f.suggestedEdit}"\n\n`;
+      if (f.suggestedEdit !== null) md += `**Agreed Amendment:** "${f.suggestedEdit}"\n\n`;
     });
 
-    navigator.clipboard.writeText(md);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (!navigator.clipboard?.writeText) {
+      setCopyError('Clipboard access is unavailable in this browser.');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(md);
+      setCopied(true);
+      setCopyError('');
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+      setCopyError('Copy failed. Check browser permissions and try again.');
+    }
   };
 
   const handleDownloadJSON = () => {
@@ -131,6 +143,11 @@ export const ReportsPage: React.FC = () => {
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
             <span>{copied ? 'Copied Markdown' : 'Copy MD'}</span>
           </button>
+          {copyError && (
+            <span role="alert" className="text-xs text-rose-600 dark:text-rose-400">
+              {copyError}
+            </span>
+          )}
 
           <button
             type="button"

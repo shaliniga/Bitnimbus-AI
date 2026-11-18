@@ -48,7 +48,7 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="h-15 px-4 sm:px-5 bg-slate-900 border-b border-slate-800 flex items-center justify-between gap-3 z-20 shrink-0 shadow-md select-none">
+    <header className="h-15 px-2 sm:px-5 bg-slate-900 border-b border-slate-800 flex items-center justify-between gap-1 sm:gap-3 z-20 shrink-0 shadow-md select-none">
 
       {/* Left: Brand Icon + Back to Documents + Document Title */}
       <div className="flex items-center gap-2 min-w-0">
@@ -64,7 +64,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </Link>
 
-        <div className="h-4 w-px bg-slate-700 shrink-0 mx-0.5" />
+        <div className="hidden h-4 w-px bg-slate-700 shrink-0 mx-0.5 sm:block" />
 
         {/* Back to Documents */}
         <Link
@@ -73,13 +73,13 @@ export const Header: React.FC<HeaderProps> = ({
           title="Return to Documents Portfolio"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span className="font-medium">Documents</span>
+          <span className="hidden font-medium sm:inline">Documents</span>
         </Link>
 
-        <span className="text-slate-600 shrink-0 font-bold">/</span>
+        <span className="hidden text-slate-600 shrink-0 font-bold sm:inline">/</span>
 
         {/* Document Title */}
-        <div className="min-w-0">
+        <div className="hidden min-w-0 sm:block">
           <span
             className="block max-w-[180px] truncate text-sm font-semibold text-white sm:max-w-xs sm:text-base md:max-w-sm"
             title={displayTitle}

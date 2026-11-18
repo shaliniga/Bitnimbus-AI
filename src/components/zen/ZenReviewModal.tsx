@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useReviewStore } from '../../store/useReviewStore';
 import { InlineDiff } from '../findings/InlineDiff';
+import { resolveAnchorRange } from '../../utils/textMatcher';
 
 export const ZenReviewModal: React.FC = () => {
   const {
@@ -32,6 +33,7 @@ export const ZenReviewModal: React.FC = () => {
 
   const filtered = getFilteredFindings();
   const currentIndex = filtered.findIndex((f) => f.id === selectedFindingId);
+  const displayIndex = currentIndex === -1 ? 0 : currentIndex;
   const currentFinding = currentIndex !== -1 ? filtered[currentIndex] : filtered[0];
 
   if (!currentFinding) return null;
@@ -51,6 +53,14 @@ export const ZenReviewModal: React.FC = () => {
       }
     }
   }
+  const anchorRange = currentFinding.anchor
+    ? resolveAnchorRange(
+        paragraphText,
+        currentFinding.anchor.start,
+        currentFinding.anchor.end,
+        currentFinding.anchor.quote
+      )
+    : null;
 
   const handleAddNote = (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +78,7 @@ export const ZenReviewModal: React.FC = () => {
             ⚡ Speed Review Mode
           </span>
           <span className="text-xs text-slate-400 font-mono">
-            Finding {currentIndex + 1} of {filtered.length}
+            Finding {displayIndex + 1} of {filtered.length}
           </span>
         </div>
 
@@ -76,7 +86,7 @@ export const ZenReviewModal: React.FC = () => {
         <div className="hidden sm:block w-64 h-1.5 bg-slate-800 rounded-full overflow-hidden">
           <div
             className="h-full bg-indigo-500 transition-all duration-200"
-            style={{ width: `${((currentIndex + 1) / filtered.length) * 100}%` }}
+            style={{ width: `${((displayIndex + 1) / filtered.length) * 100}%` }}
           />
         </div>
 
@@ -106,11 +116,17 @@ export const ZenReviewModal: React.FC = () => {
           {currentFinding.anchor ? (
             <div className="space-y-4">
               <p className="font-serif text-base sm:text-lg leading-relaxed text-slate-300">
-                {paragraphText.slice(0, currentFinding.anchor.start)}
-                <mark className="bg-amber-400/30 text-amber-200 px-1 py-0.5 rounded border-b-2 border-amber-400 font-medium">
-                  {currentFinding.anchor.quote}
-                </mark>
-                {paragraphText.slice(currentFinding.anchor.end)}
+                {anchorRange?.exact ? (
+                  <>
+                    {paragraphText.slice(0, anchorRange.start)}
+                    <mark className="bg-amber-400/30 text-amber-200 px-1 py-0.5 rounded border-b-2 border-amber-400 font-medium">
+                      {paragraphText.slice(anchorRange.start, anchorRange.end)}
+                    </mark>
+                    {paragraphText.slice(anchorRange.end)}
+                  </>
+                ) : (
+                  paragraphText
+                )}
               </p>
 
               <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800 text-xs text-slate-400">
@@ -176,7 +192,7 @@ export const ZenReviewModal: React.FC = () => {
           </div>
 
           {/* Redline Diff if suggested edit exists */}
-          {currentFinding.suggestedEdit && currentFinding.anchor && (
+          {currentFinding.suggestedEdit !== null && currentFinding.anchor && (
             <div>
               <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-300 mb-2">
                 <GitCompare className="w-3.5 h-3.5 text-indigo-400" />
@@ -189,17 +205,26 @@ export const ZenReviewModal: React.FC = () => {
             </div>
           )}
 
+          {reviewState.editError && (
+            <p
+              role="alert"
+              className="rounded-lg border border-rose-900/60 bg-rose-950/30 px-3 py-2 text-xs text-rose-300"
+            >
+              {reviewState.editError}
+            </p>
+          )}
+
           {/* Primary Action Buttons */}
           <div className="pt-4 border-t border-slate-800 flex flex-wrap items-center gap-3">
             <button
               type="button"
               onClick={() => {
-                if (currentFinding.suggestedEdit) {
-                  applySuggestedEdit(currentFinding.id);
+                if (currentFinding.suggestedEdit !== null) {
+                  if (applySuggestedEdit(currentFinding.id)) nextFinding();
                 } else {
                   setStatus(currentFinding.id, 'accepted');
+                  nextFinding();
                 }
-                nextFinding();
               }}
               className={`flex-1 py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
                 isAccepted
@@ -209,7 +234,9 @@ export const ZenReviewModal: React.FC = () => {
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>
-                {currentFinding.suggestedEdit ? 'Accept & Apply Amendment' : 'Accept Finding'}
+                {currentFinding.suggestedEdit !== null
+                  ? 'Accept & Apply Amendment'
+                  : 'Accept Finding'}
               </span>
               <kbd className="px-1.5 py-0.5 text-[10px] bg-white/20 rounded">A</kbd>
             </button>

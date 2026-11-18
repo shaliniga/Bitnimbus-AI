@@ -59,6 +59,7 @@ export const DocumentsPage: React.FC = () => {
 
     // Simulate AI Scan Latency
     setTimeout(() => {
+      const findingCount = Math.floor(Math.random() * 8) + 6;
       const newDoc: DocumentItem = {
         id: `doc-${Date.now()}`,
         name: uploadTitle.trim(),
@@ -69,10 +70,10 @@ export const DocumentsPage: React.FC = () => {
         effectiveDate: new Date().toISOString().slice(0, 10),
         riskLevel: 'High',
         status: 'Pending Review',
-        findingCount: Math.floor(Math.random() * 8) + 6,
+        findingCount,
         acceptedCount: 0,
         dismissedCount: 0,
-        pendingCount: Math.floor(Math.random() * 8) + 6,
+        pendingCount: findingCount,
         fileSize: '1.4 MB',
         tags: ['New Upload', 'AI Scanned', uploadType.split(' ')[0]],
       };

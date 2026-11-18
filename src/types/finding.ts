@@ -44,6 +44,7 @@ export interface FindingReviewState {
   notes: FindingNote[];
   isEditApplied?: boolean;
   appliedText?: string;
+  editError?: string;
   updatedAt?: string;
 }
 

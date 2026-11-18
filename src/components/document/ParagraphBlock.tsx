@@ -22,6 +22,7 @@ export const ParagraphBlock: React.FC<ParagraphBlockProps> = ({
     selectedFindingId,
     selectFinding,
     originalParagraphs,
+    contract,
     reviews,
     revertSuggestedEdit,
   } = useReviewStore();
@@ -34,9 +35,17 @@ export const ParagraphBlock: React.FC<ParagraphBlockProps> = ({
 
   // Split paragraph text into annotated segments
   const segments: TextSegment[] = useMemo(() => {
-    const ranges = getParagraphFindingRanges(paragraph.id, paragraph.text, findings);
+    const allParagraphs = contract.sections.flatMap(
+      (section) => section.paragraphs
+    );
+    const ranges = getParagraphFindingRanges(
+      paragraph.id,
+      paragraph.text,
+      findings,
+      allParagraphs
+    );
     return splitParagraphIntoSegments(paragraph.text, ranges);
-  }, [paragraph.id, paragraph.text, findings]);
+  }, [contract.sections, paragraph.id, paragraph.text, findings]);
 
   // Find if any finding applied an edit to this paragraph
   const appliedFinding = useMemo(() => {

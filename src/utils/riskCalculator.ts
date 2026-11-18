@@ -142,14 +142,20 @@ export function calculateRiskAnalytics(
   // Normalized scores out of 100
   // Benchmark maximum theoretical risk for ~24 findings with typical distributions
   const theoreticalBenchmark = findings.length * 7.5;
-  const initialRiskScore = Math.min(
-    100,
-    Math.round((totalWeightedInitialPoints / theoreticalBenchmark) * 100)
-  );
-  const residualRiskScore = Math.min(
-    100,
-    Math.round((totalWeightedResidualPoints / theoreticalBenchmark) * 100)
-  );
+  const initialRiskScore =
+    theoreticalBenchmark === 0
+      ? 0
+      : Math.min(
+          100,
+          Math.round((totalWeightedInitialPoints / theoreticalBenchmark) * 100)
+        );
+  const residualRiskScore =
+    theoreticalBenchmark === 0
+      ? 0
+      : Math.min(
+          100,
+          Math.round((totalWeightedResidualPoints / theoreticalBenchmark) * 100)
+        );
 
   let riskLevel: 'Critical' | 'High' | 'Moderate' | 'Low' = 'Low';
   if (residualRiskScore >= 75) riskLevel = 'Critical';

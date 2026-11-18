@@ -26,7 +26,14 @@ import { calculateRiskAnalytics } from '../utils/riskCalculator';
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
-  const { contract, findings, reviews, getDynamicDocuments, activityLog } = useReviewStore();
+  const {
+    contract,
+    findings,
+    reviews,
+    agentMeta,
+    getDynamicDocuments,
+    activityLog,
+  } = useReviewStore();
 
   const documents = getDynamicDocuments();
 
@@ -64,7 +71,7 @@ export const DashboardPage: React.FC = () => {
     ];
   }, [analytics]);
 
-  const primaryDoc = documents.find((d) => d.isPrimary) || documents[0];
+  const primaryDoc = documents.find((d) => d.isPrimary);
 
   return (
     <div className="h-full overflow-y-auto bg-slate-50 dark:bg-slate-950 p-4 sm:p-6 lg:p-8 space-y-6">
@@ -94,8 +101,9 @@ export const DashboardPage: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => navigate(`/review/${primaryDoc.id}`)}
-            className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+            onClick={() => primaryDoc && navigate(`/review/${primaryDoc.id}`)}
+            disabled={!primaryDoc}
+            className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Sparkles className="w-3.5 h-3.5" />
             <span>Open Active Review</span>
@@ -143,7 +151,9 @@ export const DashboardPage: React.FC = () => {
               {completedReviews}
             </span>
             <span className="text-xs font-semibold text-slate-500">
-              ({Math.round((completedReviews / totalDocuments) * 100)}% finalized)
+              ({totalDocuments > 0
+                ? Math.round((completedReviews / totalDocuments) * 100)
+                : 0}% finalized)
             </span>
           </div>
           <p className="text-[11px] text-slate-400 mt-2">
@@ -170,7 +180,9 @@ export const DashboardPage: React.FC = () => {
             </span>
           </div>
           <p className="text-[11px] text-slate-400 mt-2">
-            Includes Brightline MSA ({analytics.pendingCount} findings)
+            {primaryDoc
+              ? `Includes ${primaryDoc.name} (${analytics.pendingCount} findings)`
+              : 'No active contract in review'}
           </p>
         </div>
 
@@ -199,6 +211,7 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       {/* Featured Review Banner */}
+      {primaryDoc ? (
       <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shadow-md border border-indigo-900/40 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-2">
           <div className="flex items-center gap-2">
@@ -213,7 +226,7 @@ export const DashboardPage: React.FC = () => {
             {primaryDoc.name}
           </h2>
           <p className="text-xs text-slate-300 max-w-xl leading-relaxed">
-            AI agent analyzed 11 clauses and flagged liability cap limits, data return timelines, and missing DPA clauses.
+            {agentMeta.name} analyzed {contract.sections.length} sections and flagged {analytics.totalFindings} findings for review.
           </p>
 
           <div className="flex flex-wrap items-center gap-4 text-xs pt-1">
@@ -243,6 +256,25 @@ export const DashboardPage: React.FC = () => {
           </button>
         </div>
       </div>
+      ) : (
+        <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">
+              No active review
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              Add or select a contract to continue reviewing.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/documents')}
+            className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer"
+          >
+            View documents
+          </button>
+        </div>
+      )}
 
       {/* Charts & Analytics Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -256,7 +288,7 @@ export const DashboardPage: React.FC = () => {
               <p className="text-xs text-slate-500">Contract tiering by risk exposure level</p>
             </div>
             <span className="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-              5 Documents
+              {totalDocuments} Documents
             </span>
           </div>
 
@@ -291,10 +323,14 @@ export const DashboardPage: React.FC = () => {
               <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
                 Active Agreement Findings Breakdown
               </h3>
-              <p className="text-xs text-slate-500">Brightline Data Solutions MSA (24 issues)</p>
+              <p className="text-xs text-slate-500">
+                {primaryDoc
+                  ? `${primaryDoc.vendor} (${analytics.totalFindings} findings)`
+                  : 'No active contract'}
+              </p>
             </div>
             <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
-              Contract Agent v2.3.1
+              {agentMeta.name} v{agentMeta.version}
             </span>
           </div>
 

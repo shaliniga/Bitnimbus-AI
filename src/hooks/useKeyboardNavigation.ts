@@ -71,7 +71,11 @@ export function useKeyboardNavigation() {
         if (!selectedFindingId) return;
         e.preventDefault();
         const finding = findings.find((f) => f.id === selectedFindingId);
-        if (finding?.suggestedEdit && !reviews[finding.id]?.isEditApplied) {
+        if (
+          finding?.suggestedEdit !== null &&
+          finding?.suggestedEdit !== undefined &&
+          !reviews[finding.id]?.isEditApplied
+        ) {
           applySuggestedEdit(finding.id);
         } else {
           setStatus(selectedFindingId, 'accepted');

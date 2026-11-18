@@ -9,7 +9,14 @@ import {
 } from 'lucide-react';
 
 export const DocumentMinimap: React.FC = () => {
-  const { contract, findings, reviews, selectFinding, selectedFindingId } = useReviewStore();
+  const {
+    contract,
+    findings,
+    reviews,
+    agentMeta,
+    selectFinding,
+    selectedFindingId,
+  } = useReviewStore();
 
   const analytics = useMemo(() => {
     return calculateRiskAnalytics(contract, findings, reviews);
@@ -30,7 +37,9 @@ export const DocumentMinimap: React.FC = () => {
           <FileText className="w-3.5 h-3.5 text-indigo-500" />
           Contract Outline
         </h3>
-        <span className="text-[10px] text-slate-400">11 Sections</span>
+        <span className="text-[10px] text-slate-400">
+          {contract.sections.length} Sections
+        </span>
       </div>
 
       {/* Sections List with Risk Indicators */}
@@ -130,10 +139,14 @@ export const DocumentMinimap: React.FC = () => {
             <Sparkles className="w-3 h-3 text-indigo-500" />
             AI Agent
           </span>
-          <span className="text-[10px] text-slate-400 font-mono">v2.3.1</span>
+          <span className="text-[10px] text-slate-400 font-mono">
+            v{agentMeta.version}
+          </span>
         </div>
         <p className="text-[11px] text-slate-600 dark:text-slate-400">
-          Reviewed by Contract Review Agent on 24 clauses with 93% top confidence.
+          Reviewed by {agentMeta.name} across {contract.sections.length} sections
+          with {Math.round(Math.max(0, ...findings.map((finding) => finding.confidence)) * 100)}%
+          top confidence.
         </p>
       </div>
     </aside>

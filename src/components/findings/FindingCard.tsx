@@ -206,7 +206,7 @@ export const FindingCard: React.FC<FindingCardProps> = ({ finding, isSelected })
         )}
 
         {/* Suggested Edit / Redline Diff Box */}
-        {finding.suggestedEdit && (
+        {finding.suggestedEdit !== null && (
           <div className="mb-3.5">
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
@@ -237,6 +237,15 @@ export const FindingCard: React.FC<FindingCardProps> = ({ finding, isSelected })
               </div>
             )}
           </div>
+        )}
+
+        {reviewState.editError && (
+          <p
+            role="alert"
+            className="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300"
+          >
+            {reviewState.editError}
+          </p>
         )}
 
         {/* Current Review Status Pill if already acted upon */}
@@ -284,7 +293,7 @@ export const FindingCard: React.FC<FindingCardProps> = ({ finding, isSelected })
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                if (finding.suggestedEdit && !isApplied) {
+                if (finding.suggestedEdit !== null && !isApplied) {
                   applySuggestedEdit(finding.id);
                 } else {
                   setStatus(finding.id, 'accepted');
@@ -298,7 +307,7 @@ export const FindingCard: React.FC<FindingCardProps> = ({ finding, isSelected })
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>
-                {finding.suggestedEdit
+                {finding.suggestedEdit !== null
                   ? isApplied
                     ? 'Applied'
                     : 'Accept & Apply'

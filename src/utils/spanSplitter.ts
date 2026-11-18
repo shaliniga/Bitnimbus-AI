@@ -1,5 +1,6 @@
 import type { Finding, FindingSeverity } from '../types/finding';
-import { resolveAnchorRange } from './textMatcher';
+import type { ContractParagraph } from '../types/contract';
+import { normalizeText, resolveAnchorRange } from './textMatcher';
 
 export interface ParagraphFindingRange {
   finding: Finding;
@@ -30,7 +31,8 @@ const SEVERITY_WEIGHT: Record<FindingSeverity, number> = {
 export function getParagraphFindingRanges(
   paragraphId: string,
   paragraphText: string,
-  findings: Finding[]
+  findings: Finding[],
+  allParagraphs: ContractParagraph[]
 ): ParagraphFindingRange[] {
   const ranges: ParagraphFindingRange[] = [];
 
@@ -56,11 +58,39 @@ export function getParagraphFindingRanges(
           isCrossParagraph: false,
         });
       } else {
-        // Multi-paragraph anchor: starts here and spans to the end of this paragraph
-        const clampedStart = Math.max(0, Math.min(anchor.start, paragraphText.length));
+        const startIndex = allParagraphs.findIndex(
+          (paragraph) => paragraph.id === anchor.paragraphId
+        );
+        const endIndex = allParagraphs.findIndex(
+          (paragraph) => paragraph.id === anchor.endParagraphId
+        );
+        if (startIndex < 0 || endIndex <= startIndex) continue;
+
+        const startParagraph = allParagraphs[startIndex];
+        const endParagraph = allParagraphs[endIndex];
+        if (
+          !Number.isInteger(anchor.start) ||
+          !Number.isInteger(anchor.end) ||
+          anchor.start < 0 ||
+          anchor.start > startParagraph.text.length ||
+          anchor.end < 0 ||
+          anchor.end > endParagraph.text.length
+        ) {
+          continue;
+        }
+
+        const anchoredText = [
+          startParagraph.text.slice(anchor.start),
+          ...allParagraphs
+            .slice(startIndex + 1, endIndex)
+            .map((paragraph) => paragraph.text),
+          endParagraph.text.slice(0, anchor.end),
+        ].join(' ');
+        if (normalizeText(anchoredText) !== normalizeText(anchor.quote)) continue;
+
         ranges.push({
           finding,
-          start: clampedStart,
+          start: anchor.start,
           end: paragraphText.length,
           isCrossParagraph: true,
         });
@@ -68,11 +98,40 @@ export function getParagraphFindingRanges(
     }
     // Case 2: Multi-paragraph anchor ends in this paragraph
     else if (anchor.endParagraphId === paragraphId) {
-      const clampedEnd = Math.max(0, Math.min(anchor.end, paragraphText.length));
+      const startIndex = allParagraphs.findIndex(
+        (paragraph) => paragraph.id === anchor.paragraphId
+      );
+      const endIndex = allParagraphs.findIndex(
+        (paragraph) => paragraph.id === anchor.endParagraphId
+      );
+      if (startIndex < 0 || endIndex <= startIndex) continue;
+
+      const startParagraph = allParagraphs[startIndex];
+      const endParagraph = allParagraphs[endIndex];
+      if (
+        !Number.isInteger(anchor.start) ||
+        !Number.isInteger(anchor.end) ||
+        anchor.start < 0 ||
+        anchor.start > startParagraph.text.length ||
+        anchor.end < 0 ||
+        anchor.end > endParagraph.text.length
+      ) {
+        continue;
+      }
+
+      const anchoredText = [
+        startParagraph.text.slice(anchor.start),
+        ...allParagraphs
+          .slice(startIndex + 1, endIndex)
+          .map((paragraph) => paragraph.text),
+        endParagraph.text.slice(0, anchor.end),
+      ].join(' ');
+      if (normalizeText(anchoredText) !== normalizeText(anchor.quote)) continue;
+
       ranges.push({
         finding,
         start: 0,
-        end: clampedEnd,
+        end: anchor.end,
         isCrossParagraph: true,
       });
     }
