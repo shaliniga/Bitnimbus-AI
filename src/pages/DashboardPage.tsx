@@ -94,7 +94,7 @@ export const DashboardPage: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => navigate('/review')}
+            onClick={() => navigate(`/review/${primaryDoc.id}`)}
             className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             <Sparkles className="w-3.5 h-3.5" />
@@ -235,7 +235,7 @@ export const DashboardPage: React.FC = () => {
         <div className="flex items-center gap-3 shrink-0">
           <button
             type="button"
-            onClick={() => navigate('/review')}
+            onClick={() => navigate(`/review/${primaryDoc.id}`)}
             className="px-5 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-xs shadow-lg shadow-indigo-500/25 flex items-center gap-2 transition-all cursor-pointer"
           >
             <span>Resume Review Workspace</span>
@@ -378,7 +378,11 @@ export const DashboardPage: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {documents.slice(0, 4).map((doc) => (
-                  <tr key={doc.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                  <tr
+                    key={doc.id}
+                    onClick={() => navigate(`/review/${doc.id}`)}
+                    className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
+                  >
                     <td className="py-3 font-semibold text-slate-900 dark:text-slate-100">
                       <div className="flex items-center gap-2">
                         <FileText className="w-4 h-4 text-indigo-500 shrink-0" />
@@ -424,7 +428,10 @@ export const DashboardPage: React.FC = () => {
                     <td className="py-3 text-right">
                       <button
                         type="button"
-                        onClick={() => navigate('/review')}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/review/${doc.id}`);
+                        }}
                         className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white dark:bg-indigo-950/60 dark:text-indigo-300 dark:hover:bg-indigo-600 dark:hover:text-white transition-colors cursor-pointer"
                       >
                         Review

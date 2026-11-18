@@ -10,15 +10,21 @@ export function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<AppLayout />}>
-          <Route index element={<DashboardPage />} />
-          <Route path="documents" element={<DocumentsPage />} />
-          <Route path="review" element={<ReviewWorkspacePage />} />
-          <Route path="review/:id" element={<ReviewWorkspacePage />} />
-          <Route path="reports" element={<ReportsPage />} />
-          <Route path="settings" element={<SettingsPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+        {/* Global App Layout — Dashboard, Documents, Reports, Settings show global nav */}
+        <Route element={<AppLayout />}>
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/documents" element={<DocumentsPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Route>
+
+        {/* Dedicated full-screen Review Workspace — NO global nav, its own compact toolbar */}
+        <Route path="/review/:documentId" element={<ReviewWorkspacePage />} />
+        {/* /review redirects to the primary MSA document */}
+        <Route path="/review" element={<Navigate to="/review/msa-northwind-brightline-2026" replace />} />
+
+        {/* Catch-all fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useParams } from 'react-router-dom';
 import { Header } from '../components/header/Header';
 import { DocumentMinimap } from '../components/document/DocumentMinimap';
 import { DocumentViewer } from '../components/document/DocumentViewer';
@@ -12,29 +13,41 @@ import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
 import { FileText, SlidersHorizontal } from 'lucide-react';
 
 export const ReviewWorkspacePage = () => {
+  const { documentId } = useParams<{ documentId: string }>();
   // Mount keyboard shortcuts specifically for review workspace
   useKeyboardNavigation();
-  const { zenMode } = useReviewStore();
+  const { zenMode, getDynamicDocuments } = useReviewStore();
+
+  const documents = getDynamicDocuments();
+  const currentDoc = useMemo(() => {
+    return (
+      documents.find((d) => d.id === documentId) ||
+      documents.find((d) => d.isPrimary) ||
+      documents[0]
+    );
+  }, [documents, documentId]);
 
   const [activeMobileTab, setActiveMobileTab] = useState<'document' | 'findings'>('document');
   const [showLeftSidebar, setShowLeftSidebar] = useState(true);
 
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100 font-sans antialiased">
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-100 text-slate-900 font-sans antialiased">
       {/* Document Workspace Command Bar with breadcrumb and integrated outline toggle */}
       <Header
+        documentTitle={currentDoc?.name}
+        vendorName={currentDoc?.vendor}
         showLeftSidebar={showLeftSidebar}
         onToggleLeftSidebar={() => setShowLeftSidebar(!showLeftSidebar)}
       />
 
       {/* Mobile Tab Switcher (Visible on < lg screens) */}
-      <div className="lg:hidden flex border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
+      <div className="lg:hidden flex border-b border-slate-200 bg-white shrink-0">
         <button
           type="button"
           onClick={() => setActiveMobileTab('document')}
           className={`flex-1 py-2.5 text-xs font-semibold flex items-center justify-center gap-1.5 border-b-2 transition-colors ${
             activeMobileTab === 'document'
-              ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400 bg-indigo-50/30'
+              ? 'border-indigo-600 text-indigo-600 bg-indigo-50/30'
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >
@@ -47,7 +60,7 @@ export const ReviewWorkspacePage = () => {
           onClick={() => setActiveMobileTab('findings')}
           className={`flex-1 py-2.5 text-xs font-semibold flex items-center justify-center gap-1.5 border-b-2 transition-colors ${
             activeMobileTab === 'findings'
-              ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400 bg-indigo-50/30'
+              ? 'border-indigo-600 text-indigo-600 bg-indigo-50/30'
               : 'border-transparent text-slate-500 hover:text-slate-800'
           }`}
         >

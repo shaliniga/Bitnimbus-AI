@@ -3,7 +3,6 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   FolderKanban,
-  FileSearch,
   BarChart3,
   Settings,
   Scale,
@@ -17,12 +16,11 @@ export const AppLayout: React.FC = () => {
   const navigate = useNavigate();
   const { contract, findings, reviews, userSettings } = useReviewStore();
 
-  const isWorkspace = location.pathname.startsWith('/review');
-
   const analytics = React.useMemo(() => {
     return calculateRiskAnalytics(contract, findings, reviews);
   }, [contract, findings, reviews]);
 
+  // Global Navigation: Exactly Dashboard, Documents, Reports & Analytics, Settings
   const navItems = [
     {
       to: '/',
@@ -34,12 +32,6 @@ export const AppLayout: React.FC = () => {
       to: '/documents',
       label: 'Documents',
       icon: FolderKanban,
-    },
-    {
-      to: '/review',
-      label: 'Review Workspace',
-      icon: FileSearch,
-      badge: analytics.pendingCount > 0 ? `${analytics.pendingCount}` : undefined,
     },
     {
       to: '/reports',
@@ -55,7 +47,7 @@ export const AppLayout: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 font-sans antialiased">
-      {/* Global Enterprise Top Navigation Bar - Distinct Deep Slate/Navy Theme */}
+      {/* Global Enterprise Top Navigation Bar */}
       <nav className="h-13 px-4 sm:px-6 bg-slate-900 border-b border-slate-800 text-white flex items-center justify-between gap-4 z-30 shrink-0 shadow-sm">
         {/* Brand Logo & Platform Title */}
         <div className="flex items-center gap-6">
@@ -81,7 +73,7 @@ export const AppLayout: React.FC = () => {
             </div>
           </div>
 
-          {/* Navigation Links with High-Contrast Active States */}
+          {/* Navigation Links: Dashboard, Documents, Reports & Analytics, Settings */}
           <div className="hidden md:flex items-center gap-1">
             {navItems.map((item) => {
               const isActive = item.exact
@@ -100,11 +92,6 @@ export const AppLayout: React.FC = () => {
                 >
                   <item.icon className="w-3.5 h-3.5" />
                   <span>{item.label}</span>
-                  {item.badge && (
-                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-rose-500 text-white font-bold font-mono">
-                      {item.badge}
-                    </span>
-                  )}
                 </NavLink>
               );
             })}
@@ -113,25 +100,24 @@ export const AppLayout: React.FC = () => {
 
         {/* Right Section: Active Review Quick-Pill & Reviewer Profile */}
         <div className="flex items-center gap-3">
-          {/* Quick jump to active MSA review if not already in workspace */}
-          {!isWorkspace && (
-            <button
-              type="button"
-              onClick={() => navigate('/review')}
-              className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors border border-slate-700 cursor-pointer"
-            >
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" />
-                <span className="font-semibold text-white">
-                  Brightline MSA
-                </span>
-                <span className="text-[10px] text-slate-400">
-                  ({analytics.residualRiskScore}/100 Risk)
-                </span>
-              </div>
-              <ArrowRight className="w-3 h-3 text-slate-400" />
-            </button>
-          )}
+          {/* Quick jump to active MSA review workspace */}
+          <button
+            type="button"
+            onClick={() => navigate('/review/msa-northwind-brightline-2026')}
+            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors border border-slate-700 cursor-pointer"
+            title="Open active review in dedicated workspace"
+          >
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" />
+              <span className="font-semibold text-white">
+                Brightline MSA
+              </span>
+              <span className="text-[10px] text-slate-400">
+                ({analytics.residualRiskScore}/100 Risk)
+              </span>
+            </div>
+            <ArrowRight className="w-3 h-3 text-slate-400" />
+          </button>
 
           {/* User Profile Tag */}
           <div

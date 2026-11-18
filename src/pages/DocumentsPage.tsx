@@ -233,7 +233,7 @@ export const DocumentsPage: React.FC = () => {
                 return (
                   <tr
                     key={doc.id}
-                    onClick={() => navigate('/review')}
+                    onClick={() => navigate(`/review/${doc.id}`)}
                     className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors cursor-pointer group"
                   >
                     {/* Title & Type */}
@@ -324,7 +324,7 @@ export const DocumentsPage: React.FC = () => {
                       <div className="flex items-center justify-end gap-2">
                         <button
                           type="button"
-                          onClick={() => navigate('/review')}
+                          onClick={() => navigate(`/review/${doc.id}`)}
                           className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white dark:bg-indigo-950/60 dark:text-indigo-300 dark:hover:bg-indigo-600 dark:hover:text-white transition-all flex items-center gap-1 cursor-pointer"
                         >
                           <span>Review</span>
