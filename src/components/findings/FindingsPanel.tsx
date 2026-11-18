@@ -78,7 +78,7 @@ export const FindingsPanel: React.FC = () => {
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
               <SlidersHorizontal className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-              AI Review Findings
+              Findings
             </h2>
             <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-semibold">
               {filteredFindings.length} of {findings.length}

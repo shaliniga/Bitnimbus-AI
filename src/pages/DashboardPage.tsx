@@ -305,6 +305,8 @@ export const DashboardPage: React.FC = () => {
                     color: '#fff',
                     fontSize: '12px',
                   }}
+                  labelStyle={{ color: '#fff' }}
+                  itemStyle={{ color: '#fff' }}
                 />
                 <Bar dataKey="count" radius={[6, 6, 0, 0]}>
                   {riskDistributionData.map((entry, index) => (
