@@ -1,8 +1,8 @@
-# Northwind Analytics — AI Document Review Workspace
+# Northwind Analytics — AI Document Review & Legal Operations Platform
 
-An intuitive, high-velocity legal review interface designed for legal operations reviewers. This workspace pairs an AI contract review agent’s findings directly alongside structured agreements, transforming complex contract risk audits into an actionable, bidirectional triage experience.
+An enterprise-grade, multi-page legal AI review platform designed for corporate legal counsel and legal operations teams. The platform combines portfolio-wide risk governance with a context-rich, bidirectional contract review workspace.
 
-Built with **React 19**, **TypeScript**, **Vite**, **Tailwind CSS**, and **Zustand**.
+Built with **React 19**, **TypeScript**, **Vite**, **Tailwind CSS**, **React Router v7**, **Recharts**, and **Zustand**.
 
 ---
 
@@ -40,52 +40,57 @@ npm run preview
 
 ---
 
-## 🎯 The Scenario & Core Reviewer Workflows
+## 🏛️ Multi-Page Platform Architecture
 
-A legal operations reviewer at **Northwind Analytics** received a vendor Master Services Agreement with **Brightline Data Solutions LLC**. The AI review agent generated 24 findings.
+The application is structured into five cohesive, dedicated views connected via **React Router**:
 
-The reviewer needs to:
-1. **Understand at a glance how "risky" the document is and where problems reside**:
-   - **Executive Risk Barometer**: Dynamically computes an overall contract risk score (0–100) weighted by severity and AI confidence. As the reviewer mitigates issues or accepts business risks, the score recalculates in real time.
-   - **Interactive Document Outline & Risk Heatmap**: A visual minimap gutter reveals risk concentration across all 11 sections of the contract.
-2. **Work through findings in context**:
-   - **Bidirectional Navigation**: Clicking any highlighted text in the document scrolls to and selects the finding card; clicking any finding card centers and pulses the anchored paragraph.
-   - **Interval-Splitting Engine**: Effortlessly handles overlapping annotations and cross-paragraph anchors.
-3. **Decide what to do with each finding**:
-   - **Accept & Apply Amendment**: Accepts the finding and dynamically patches the contract text with the proposed redline edit, displaying an "Amended by Reviewer" badge.
-   - **Dismiss**: Dismisses the issue as an acceptable business risk while maintaining an audit trail.
-   - **Notes & Collaboration**: Reviewers can add custom commentary or 1-click legal tags (*"Flag for external counsel"*, *"Counter-propose 12-mo cap"*, *"Non-negotiable warranty"*).
-4. **Know when they are done**:
-   - Real-time progress indicators (e.g. `18 / 24 reviewed • 75%`).
-   - Executive Audit Modal summarizing agreed amendments, reviewer notes, and residual risks with export options (**Markdown**, **JSON**, and **Print / PDF**).
+```
++-----------------------------------------------------------------------------------------------------------------+
+| GLOBAL TOPBAR: [Scale] Northwind LEGAL AI | Dashboard | Documents | Review Workspace [24] | Reports | Settings  |
++-----------------------------------------------------------------------------------------------------------------+
+|                                                                                                                 |
+|  1. /dashboard       -> Portfolio metrics, Risk distribution chart, Recent documents & Live activity feed       |
+|  2. /documents       -> Contract repository with filters (Risk, Status, Search) & Upload document modal         |
+|  3. /review          -> Full 3-column Contract Review Workspace with integrated command bar & redlines          |
+|  4. /reports         -> Review completion analytics, category & severity distribution, negotiated amendments    |
+|  5. /settings        -> Reviewer profile, theme preferences (light/dark/system), and alert configurations       |
+|                                                                                                                 |
++-----------------------------------------------------------------------------------------------------------------+
+```
+
+### 1. Dashboard (`/`)
+- **Key Metrics**: Total active contracts, Completed reviews, Pending reviews, and High-risk agreements.
+- **Visual Analytics**: Interactive Recharts bar chart of portfolio risk distribution (Critical, High, Moderate, Low) and findings severity breakdown.
+- **Quick Actions**: One-click jump to resume the in-flight Master Services Agreement review.
+- **Live Activity Feed**: Real-time event log tracking reviewer decisions, applied amendments, and comments.
+
+### 2. Documents Portfolio (`/documents`)
+- **Search & Multi-Filters**: Filter by risk level, review status, or text search across vendors, document titles, and tags.
+- **Comprehensive Listing**: Displays document name, vendor, risk pill, status badge, finding progress bar, upload date, and direct review launch.
+- **Contract Upload Interface**: Upload modal supporting JSON, PDF, and DOCX files with simulated AI risk extraction that registers contracts directly into the portfolio.
+
+### 3. Review Workspace (`/review` or `/review/:id`)
+- **Preserved Core Functionality**: Preserves the complete three-column legal review interface without breaking existing annotations or keyboard navigation.
+- **Unified Command Bar**: Eliminated redundant duplicate headers by integrating the document title, vendor name, back-to-portfolio breadcrumb, and sidebar toggle into a slim, single-tier workspace toolbar.
+- **Executive Risk Barometer**: Dynamically computes residual risk score ($0$–$100$) weighted by severity and confidence.
+- **Interval-Splitting Highlighter**: Gracefully handles overlapping finding anchors (`f-04` & `f-05` in `§ 6.2`), cross-paragraph spans (`f-02` in `§ 3.4`–`§ 3.5`), and document-wide missing clauses (`f-09`).
+- **Live Redline Amendment**: Allows reviewers to accept AI proposed edits, applying changes in-place with an "Amended" badge and inline word-level diff.
+- **Speed Review Zen Mode (`Z`)**: Distraction-free single-clause triage mode.
+
+### 4. Reports & Analytics (`/reports`)
+- **Completion Analytics**: Donut/pie chart of Accepted vs. Dismissed vs. Pending findings.
+- **Severity & Discipline Breakdown**: Bar charts depicting risk gravity and legal categories (Liability, Data Protection, Termination, Payment, etc.).
+- **Negotiated Redline Schedule**: Table of all accepted contract modifications.
+- **Multi-Format Export**: Instant export to Markdown, JSON Audit log, or browser print / PDF.
+
+### 5. Settings (`/settings`)
+- **Reviewer Identity**: Reviewer name, role, email, and department metadata.
+- **Theme Preferences**: Clean Light, Deep Dark, or System Match.
+- **Audit Automation**: Auto-save drafts to `localStorage`, critical risk alerts, and export format defaults.
 
 ---
 
-## 💡 Key Design Decisions & Alternatives Considered
-
-### 1. Highlight Engine: Interval-Splitting vs. Nested DOM Spans
-* **Problem**: In realistic legal review datasets, findings overlap. For example, in paragraph `§ 6.2`, finding `f-04` covers characters 0–227, while `f-05` covers characters 167–376. Naive DOM tags (`<mark>...</mark>`) will create malformed HTML or throw rendering errors when overlapping.
-* **Our Solution**: Implemented an interval-splitting algorithm (`src/utils/spanSplitter.ts`). It computes all unique boundary points $\{0, s_1, e_1, s_2, e_2, \dots, \text{length}\}$, slices the text into disjoint sub-intervals, and attaches an array of active finding IDs to each sub-interval.
-* **UX Result**: When text has overlapping issues, it renders a distinct purple tint and an interactive stacked badge (`[Layers 2]`). Clicking it opens a contextual picker to toggle between the overlapping findings without visual glitches.
-
-### 2. Multi-Paragraph Anchors
-* **Problem**: Finding `f-02` begins in `§ 3.4` (offset 151) and concludes in `§ 3.5` (offset 173).
-* **Our Solution**: The highlighter inspects both `paragraphId` and `endParagraphId`. It maps `[151, len]` on the starting paragraph and `[0, 173]` on the concluding paragraph, linking both text spans to finding `f-02`.
-
-### 3. Missing Clauses (`anchor: null`)
-* **Problem**: Systemic findings such as `f-09` (*No data protection or security obligations*) have no text anchor in the contract.
-* **Alternative Considered**: Hiding them in a separate tab or leaving them as detached cards.
-* **Our Solution**: Dedicated **Document-Wide / Missing Clauses** banner positioned at the top of the findings pane and minimap. Reviewers can accept the recommendation to attach a standard Data Processing Addendum (DPA) Schedule directly to the redline export.
-
-### 4. Live Contract Amendment vs. Read-Only Side Diff
-* **Decision**: Rather than merely displaying suggested edits in a static sidebar, reviewers can click **"Accept & Apply"**. This modifies the document model in memory, displays an inline redline diff, and tags the clause as `Amended by Reviewer` with an instant revert option.
-
-### 5. Zen Speed Review Mode
-* **Decision**: Power reviewers reviewing dozens of clauses per day need maximum focus. We added a **Zen Triage Mode** (`Z` key) that isolates the current finding alongside its context paragraph with large, accessible triage controls.
-
----
-
-## ⌨️ Keyboard-Driven Review
+## ⌨️ Keyboard Shortcuts (Review Workspace)
 
 | Key | Action |
 | :--- | :--- |
@@ -99,27 +104,8 @@ The reviewer needs to:
 
 ---
 
-## 🛡️ Robustness & Data Integrity
+## 🛡️ Data Handling & State Management
 
-- **Fuzzy Quote Matching**: If whitespace normalization or character encodings cause start/end offsets to drift, `resolveAnchorRange` in `src/utils/textMatcher.ts` automatically runs a normalized search to self-heal offsets.
-- **State Persistence**: Review actions (status, custom notes, applied edits) persist across page reloads via `localStorage` (`northwind_ai_document_review_v1`), with a one-click session reset button.
-- **Strict TypeScript & Oxlint**: Built under `verbatimModuleSyntax: true` and zero lint warnings.
-
----
-
-## ⚖️ Prioritization & Trade-offs
-
-### What We Prioritized
-1. **Fluid, bidirectional context**: Zero friction between reading the contract and evaluating the AI's critique.
-2. **Robust interval segmentation**: Overlapping anchors and cross-paragraph spans work seamlessly.
-3. **Actionable triage**: Clear differentiation between High, Medium, and Low risks, inline redline diffs, and live contract amendments.
-4. **Executive reporting**: Instant generation of negotiation schedules, audit notes, and risk score tracking.
-
-### What We Cut / Scoped Out
-- **Backend database**: Per specification, kept in-memory and `localStorage`.
-- **Custom rich text editor**: We opted for clean structured text replacement rather than a heavy WYSIWYG editor like ProseMirror or Slate to keep performance snappy and bundle size small (~99 KB gzipped).
-
-### What We'd Do With More Time
-- **Interactive LLM Co-Pilot Drawer**: Connect an active LLM to allow reviewers to prompt: *"Draft a counter-clause with a 12-month liability cap and mutual indemnification"*.
-- **Virtualization for 200+ Page Documents**: Implement `@tanstack/react-virtual` for enterprise-scale 500-page master agreements.
-- **Multi-Reviewer Collaboration**: Real-time presence and conflict resolution via CRDTs (e.g., Yjs).
+- **Centralized Zustand Store**: Persistent state via `zustand/middleware` under `localStorage` key `northwind_ai_document_review_v1`.
+- **Dynamic Metric Synchronization**: Actions taken on individual findings in the Review Workspace automatically update the portfolio metrics, progress rings, and activity feeds across all pages in real time.
+- **Strict Verification**: Built with `verbatimModuleSyntax: true` and verified with Oxlint (0 errors, 0 warnings).
