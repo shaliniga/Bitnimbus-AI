@@ -1,69 +1,193 @@
-# Bitnimbus AI Document Reviewer
+# Bitnimbus AI – Intelligent Contract Review Dashboard
 
-A client-side contract review demo with a portfolio dashboard and a review workspace for one supplied Master Services Agreement (MSA). The included findings and contract text are sample data; the application does not call an AI service.
+A modern, interactive contract review dashboard built with React and TypeScript. It provides a centralized workspace to review a Master Services Agreement (MSA), identify contract risks, manage findings, apply suggested amendments, and track review progress.
 
-## Requirements
+**Live Demo:** https://bitnimbus.netlify.app/  
+**GitHub Repository:** https://github.com/shaliniga/Bitnimbus-AI
 
-- Node.js 22.12+
+---
+
+## Overview
+
+Bitnimbus AI is a client-side contract review application designed to simplify the contract review process through an intuitive dashboard and an interactive document workspace.
+
+The application includes a portfolio dashboard and a dedicated review workspace for a sample Master Services Agreement. Users can explore contract findings, navigate between highlighted clauses and their associated findings, manage review decisions, add notes, and apply or revert suggested amendments.
+
+> **Note:** This is a frontend demonstration using bundled sample contract data and findings. It does not currently integrate with a live AI service or backend.
+
+## Key Features
+
+### 1. Contract Portfolio Dashboard
+- View contract portfolio summaries and review progress.
+- Monitor contract risk levels and review statuses.
+- Explore document metadata and portfolio entries.
+- View recent review activity.
+
+### 2. Interactive Contract Review
+- Read the supplied Master Services Agreement in a structured document viewer.
+- Highlight contract clauses associated with findings.
+- Navigate between findings and their corresponding document sections.
+- Support overlapping and cross-paragraph annotations.
+- Navigate findings using keyboard shortcuts.
+
+### 3. Finding Management
+- Review findings categorized by severity.
+- Filter findings by severity, category, and review status.
+- Search findings and sort them by severity, confidence, or status.
+- Accept or dismiss findings.
+- Add reviewer comments and notes.
+
+### 4. Suggested Amendments
+- View proposed text changes with inline comparisons.
+- Apply suggested amendments to the contract.
+- Revert applied amendments to restore original text.
+- Prevent conflicting amendment operations.
+
+### 5. Review Progress and Reports
+- Track accepted, dismissed, and pending findings.
+- View review summaries and risk analytics.
+- Export reports in Markdown and JSON formats.
+- Print review summaries.
+
+### 6. Persistent Review State
+- Save review progress using browser LocalStorage.
+- Restore review statuses, notes, and amendments after refreshing the page.
+- Configure automatic saving through reviewer settings.
+
+## Technology Stack
+
+| Category | Technologies |
+|---|---|
+| Frontend | React 19, TypeScript |
+| Build Tool | Vite |
+| Styling | Tailwind CSS |
+| Routing | React Router |
+| State Management | Zustand |
+| Charts | Recharts |
+| Icons | Lucide React |
+| Persistence | Browser LocalStorage |
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 22.12 or later
 - npm
 
-## Install and run
+### Installation
+
+Clone the repository:
 
 ```bash
 git clone https://github.com/shaliniga/Bitnimbus-AI.git
+```
+
+Navigate to the project directory:
+
+```bash
 cd Bitnimbus-AI
+```
+
+Install dependencies:
+
+```bash
 npm install
+```
+
+Start the development server:
+
+```bash
 npm run dev
 ```
 
-Vite prints the local development URL (usually `http://localhost:5173`).
+Open the local URL provided by Vite, usually:
 
-```bash
-npm run build
-npm run lint
-npm test
-npm run preview
+```text
+http://localhost:5173
 ```
 
-No environment variables are required.
+### Available Scripts
 
-## Routes
+| Command | Description |
+|---|---|
+| `npm run dev` | Start the development server |
+| `npm run build` | Type-check and build the application |
+| `npm run lint` | Run Oxlint |
+| `npm test` | Run the review workflow tests |
+| `npm run preview` | Preview the production build |
 
-- `/` - dashboard and portfolio summary
-- `/documents` - portfolio entries and metadata-only demo entry form
-- `/review` - redirects to the supported MSA review
-- `/review/:documentId` - review workspace for the supported MSA; demo and unknown document IDs show an unavailable message
-- `/reports` - status analytics and applied-amendment report for the MSA
-- `/settings` - reviewer preferences and local review settings
+## Application Routes
 
-## Project structure
+| Route | Description |
+|---|---|
+| `/` | Dashboard and portfolio overview |
+| `/documents` | Contract portfolio and document metadata |
+| `/review` | Redirects to the supported MSA review |
+| `/review/:documentId` | Contract review workspace |
+| `/reports` | Review analytics and amendment reports |
+| `/settings` | Reviewer preferences and application settings |
 
-- `src/assets/sample-contract.json` and `src/assets/findings.json` - the only contract and findings dataset
-- `src/store/useReviewStore.ts` - Zustand state, review actions, document metadata, and persistence
-- `src/utils/spanSplitter.ts` - annotation range resolution and overlapping text segments
-- `src/utils/amendments.ts` - edit operation calculation, conflict checks, and text updates
-- `src/utils/reviewPersistence.ts` - persisted-state validation and amendment restoration
-- `src/components/document/` - contract reader and paragraph annotations
-- `src/components/findings/` - finding cards, status actions, notes, and redlines
-- `src/pages/` - dashboard, documents, reports, settings, and review routes
+## Project Structure
 
-## Implemented behavior
+```text
+Bitnimbus-AI/
+├── public/
+├── src/
+│   ├── assets/
+│   │   ├── findings.json
+│   │   └── sample-contract.json
+│   ├── components/
+│   │   ├── common/
+│   │   ├── document/
+│   │   ├── findings/
+│   │   ├── header/
+│   │   ├── layout/
+│   │   └── modals/
+│   ├── hooks/
+│   ├── pages/
+│   ├── store/
+│   │   └── useReviewStore.ts
+│   ├── types/
+│   └── utils/
+│       ├── amendments.ts
+│       ├── documentReview.ts
+│       ├── reviewPersistence.ts
+│       ├── spanSplitter.ts
+│       └── textMatcher.ts
+├── tests/
+├── package.json
+└── README.md
+```
 
-- Review of the bundled MSA and its bundled findings, including overlapping and cross-paragraph anchors.
-- Finding status, reviewer notes, suggested text application/reversion, and reset.
-- Persisted review data in browser `localStorage` using the key `northwind_ai_document_review_v1`.
-- Markdown/JSON report export and browser print from the reports and summary views.
-- A keyboard-navigable review workspace.
+## Current Limitations
 
-## Known limitations
+- Only the bundled Master Services Agreement has actual contract content and associated findings.
+- Other portfolio entries are demo-only and cannot be reviewed.
+- Adding a portfolio entry currently saves document metadata; file upload and contract parsing are not implemented.
+- PDF and DOCX parsing are not currently supported.
+- Findings are predefined sample data rather than AI-generated results.
+- Risk analytics and dashboard activity use local demonstration data.
+- Review data is stored in browser LocalStorage. There is no backend, authentication, or cross-device synchronization.
 
-- Only the bundled MSA has contract text and findings. Other portfolio rows are explicitly demo-only and cannot be reviewed.
-- The portfolio entry form saves title, vendor, and agreement type metadata only. It does not upload a file or parse/analyze a contract.
-- PDF, DOCX, and arbitrary JSON document parsing are not implemented.
-- Findings are bundled sample data, not generated by a live AI model. Dashboard activity and risk metrics are local demo state.
-- Persistence is local to the current browser and device; there is no server, user authentication, or cross-device synchronization.
-- Disabling auto-save prevents review statuses, notes, and amendments from being restored on a later page load. Reviewer settings and portfolio metadata remain stored.
+## Future Enhancements
 
-## Technology
+- Integrate an AI-powered contract analysis service.
+- Support PDF and DOCX document uploads and parsing.
+- Generate contract findings automatically.
+- Introduce backend APIs and database persistence.
+- Add authentication and role-based access control.
+- Support collaborative contract reviews.
 
-React 19, TypeScript, Vite, Tailwind CSS, React Router, Recharts, Zustand, and Lucide React.
+---
+
+## Author
+
+**Shalini G.**
+
+[GitHub](https://github.com/shaliniga)
+
+---
+
+## License
+
+This project is available for demonstration and learning purposes.
