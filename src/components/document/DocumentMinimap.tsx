@@ -28,7 +28,7 @@ export const DocumentMinimap: React.FC = () => {
       <div className="p-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
           <FileText className="w-3.5 h-3.5 text-indigo-500" />
-          Contract Outline & Heatmap
+          Contract Outline
         </h3>
         <span className="text-[10px] text-slate-400">11 Sections</span>
       </div>

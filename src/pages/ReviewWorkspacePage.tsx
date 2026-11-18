@@ -35,9 +35,6 @@ export const ReviewWorkspacePage = () => {
       {/* Document Workspace Command Bar with breadcrumb and integrated outline toggle */}
       <Header
         documentTitle={currentDoc?.name}
-        vendorName={currentDoc?.vendor}
-        showLeftSidebar={showLeftSidebar}
-        onToggleLeftSidebar={() => setShowLeftSidebar(!showLeftSidebar)}
       />
 
       {/* Mobile Tab Switcher (Visible on < lg screens) */}
@@ -84,7 +81,10 @@ export const ReviewWorkspacePage = () => {
             activeMobileTab === 'document' ? 'block' : 'hidden lg:flex'
           }`}
         >
-          <DocumentViewer />
+          <DocumentViewer
+            showLeftSidebar={showLeftSidebar}
+            onToggleLeftSidebar={() => setShowLeftSidebar(!showLeftSidebar)}
+          />
         </div>
 
         {/* Right Column: AI Findings Hub */}

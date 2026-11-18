@@ -1,9 +1,23 @@
 import React, { useEffect, useRef } from 'react';
 import { useReviewStore } from '../../store/useReviewStore';
 import { ParagraphBlock } from './ParagraphBlock';
-import { Building2, Calendar, FileText } from 'lucide-react';
+import {
+  Building2,
+  Calendar,
+  FileText,
+  PanelLeft,
+  PanelLeftClose,
+} from 'lucide-react';
 
-export const DocumentViewer: React.FC = () => {
+interface DocumentViewerProps {
+  showLeftSidebar: boolean;
+  onToggleLeftSidebar: () => void;
+}
+
+export const DocumentViewer: React.FC<DocumentViewerProps> = ({
+  showLeftSidebar,
+  onToggleLeftSidebar,
+}) => {
   const { contract, findings, selectedFindingId, highlightedParagraphId } = useReviewStore();
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -28,8 +42,24 @@ export const DocumentViewer: React.FC = () => {
   return (
     <div
       ref={containerRef}
-      className="flex-1 overflow-y-auto bg-slate-100/60 dark:bg-slate-950/80 p-4 sm:p-6 lg:p-8"
+      className="flex-1 overflow-y-auto bg-slate-100/60 px-4 pb-4 pt-2 dark:bg-slate-950/80 sm:px-6 sm:pb-6 sm:pt-3 lg:px-8 lg:pb-8 lg:pt-3"
     >
+      <div className="mx-auto mb-1 flex max-w-4xl justify-start">
+        <button
+          type="button"
+          onClick={onToggleLeftSidebar}
+          className="hidden items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-slate-500 transition-colors hover:bg-white hover:text-slate-800 hover:shadow-sm dark:hover:bg-slate-800 dark:hover:text-white xl:flex"
+          title={showLeftSidebar ? 'Collapse Contract Outline' : 'Expand Contract Outline'}
+          aria-label={showLeftSidebar ? 'Collapse Contract Outline' : 'Expand Contract Outline'}
+        >
+          {showLeftSidebar ? (
+            <PanelLeftClose className="h-4 w-4" />
+          ) : (
+            <PanelLeft className="h-4 w-4" />
+          )}
+          <span>{showLeftSidebar ? 'Collapse outline' : 'Show outline'}</span>
+        </button>
+      </div>
       <div className="max-w-4xl mx-auto bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 p-6 sm:p-10 lg:p-12 mb-16">
         {/* Document Formal Header */}
         <div className="border-b border-slate-200 dark:border-slate-800 pb-8 mb-8 text-center sm:text-left">

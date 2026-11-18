@@ -1,15 +1,12 @@
 import React, { useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
-  TrendingDown,
   Download,
   Keyboard,
   Zap,
   RotateCcw,
   ArrowLeft,
-  PanelLeftClose,
-  PanelLeft,
-  Building2,
+  MoreHorizontal,
   Scale,
 } from 'lucide-react';
 import { useReviewStore } from '../../store/useReviewStore';
@@ -17,18 +14,11 @@ import { calculateRiskAnalytics } from '../../utils/riskCalculator';
 
 interface HeaderProps {
   documentTitle?: string;
-  vendorName?: string;
-  showLeftSidebar?: boolean;
-  onToggleLeftSidebar?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   documentTitle,
-  vendorName,
-  showLeftSidebar = true,
-  onToggleLeftSidebar,
 }) => {
-  const navigate = useNavigate();
   const {
     contract,
     findings,
@@ -45,10 +35,7 @@ export const Header: React.FC<HeaderProps> = ({
     return calculateRiskAnalytics(contract, findings, reviews);
   }, [contract, findings, reviews]);
 
-  const riskReduction = analytics.initialRiskScore - analytics.residualRiskScore;
-
   const displayTitle = documentTitle || contract.title;
-  const displayVendor = vendorName || contract.parties[1]?.name || 'Brightline Data Solutions LLC';
 
   const handleReset = () => {
     if (
@@ -61,23 +48,20 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <header className="h-13 px-4 sm:px-5 bg-slate-900 border-b border-slate-800 flex items-center justify-between gap-3 z-20 shrink-0 shadow-md select-none">
+    <header className="h-15 px-4 sm:px-5 bg-slate-900 border-b border-slate-800 flex items-center justify-between gap-3 z-20 shrink-0 shadow-md select-none">
 
-      {/* Left: Northwind Logo + Back to Documents + Document Title & Vendor */}
-      <div className="flex items-center gap-2.5 min-w-0">
+      {/* Left: Brand Icon + Back to Documents + Document Title */}
+      <div className="flex items-center gap-2 min-w-0">
 
-        {/* Northwind Brand */}
+        {/* Brand Icon */}
         <Link
           to="/"
           className="flex items-center gap-1.5 shrink-0 group hover:opacity-85 transition-opacity"
-          title="Back to Northwind Legal AI Dashboard"
+          title="Back to Dashboard"
         >
           <div className="w-7 h-7 rounded-lg bg-indigo-500 text-white flex items-center justify-center shadow-xs group-hover:bg-indigo-400 transition-colors">
             <Scale className="w-3.5 h-3.5" />
           </div>
-          <span className="font-bold text-xs tracking-tight text-white hidden sm:inline">
-            Northwind
-          </span>
         </Link>
 
         <div className="h-4 w-px bg-slate-700 shrink-0 mx-0.5" />
@@ -85,7 +69,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Back to Documents */}
         <Link
           to="/documents"
-          className="flex items-center gap-1 text-xs font-semibold text-slate-400 hover:text-white px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors shrink-0 cursor-pointer"
+          className="flex items-center gap-1 text-sm font-semibold text-slate-400 hover:text-white px-2 py-1 rounded-lg hover:bg-slate-800 transition-colors shrink-0 cursor-pointer"
           title="Return to Documents Portfolio"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
@@ -94,43 +78,27 @@ export const Header: React.FC<HeaderProps> = ({
 
         <span className="text-slate-600 shrink-0 font-bold">/</span>
 
-        {/* Sidebar Outline Toggle */}
-        {onToggleLeftSidebar && (
-          <button
-            type="button"
-            onClick={onToggleLeftSidebar}
-            className="hidden xl:flex p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
-            title={showLeftSidebar ? 'Collapse Outline Panel' : 'Expand Outline Panel'}
+        {/* Document Title */}
+        <div className="min-w-0">
+          <span
+            className="block max-w-[180px] truncate text-sm font-semibold text-white sm:max-w-xs sm:text-base md:max-w-sm"
+            title={displayTitle}
           >
-            {showLeftSidebar ? (
-              <PanelLeftClose className="w-3.5 h-3.5" />
-            ) : (
-              <PanelLeft className="w-3.5 h-3.5" />
-            )}
-          </button>
-        )}
-
-        {/* Document Title & Vendor */}
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="font-bold text-xs sm:text-sm text-white truncate max-w-[200px] sm:max-w-xs md:max-w-sm">
             {displayTitle}
-          </span>
-          <span className="hidden lg:inline-flex items-center gap-1 text-[11px] font-medium text-slate-300 bg-slate-800 px-2.5 py-0.5 rounded-full border border-slate-700 shrink-0">
-            <Building2 className="w-3 h-3 text-slate-500" />
-            <span>
-              Vendor: <strong className="text-slate-100">{displayVendor}</strong>
-            </span>
           </span>
         </div>
       </div>
 
       {/* Center: Risk Score & Review Progress */}
-      <div className="hidden lg:flex items-center gap-4 shrink-0">
+      <div className="hidden lg:flex items-center gap-3 shrink-0">
 
         {/* Risk Score Pill */}
-        <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700">
+        <div
+          className="flex items-center gap-2 rounded-lg px-2 py-1"
+          title={`Risk score: ${analytics.residualRiskScore}/100`}
+        >
           <div
-            className={`w-6 h-6 rounded-md flex items-center justify-center font-bold text-[11px] ${
+            className={`flex h-6 w-6 items-center justify-center rounded-md text-[11px] font-bold ${
               analytics.residualRiskScore >= 70
                 ? 'bg-rose-500/20 text-rose-300'
                 : analytics.residualRiskScore >= 40
@@ -141,9 +109,9 @@ export const Header: React.FC<HeaderProps> = ({
             {analytics.residualRiskScore}
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs">
+          <div className="text-sm">
             <span
-              className={`font-bold text-xs ${
+              className={`font-bold text-sm ${
                 analytics.residualRiskScore >= 70
                   ? 'text-rose-400'
                   : analytics.residualRiskScore >= 40
@@ -153,28 +121,17 @@ export const Header: React.FC<HeaderProps> = ({
             >
               {analytics.riskLevel} Risk
             </span>
-
-            {riskReduction > 0 ? (
-              <span className="text-[10px] font-semibold text-emerald-400 flex items-center gap-0.5">
-                <TrendingDown className="w-3 h-3" />
-                -{riskReduction} pts
-              </span>
-            ) : (
-              <span className="text-[10px] text-slate-500">
-                (Baseline {analytics.initialRiskScore}/100)
-              </span>
-            )}
           </div>
         </div>
 
         {/* Progress Mini-bar */}
-        <div className="w-36 hidden xl:block">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-slate-500 text-[10px] uppercase font-bold tracking-wider">
+        <div className="hidden w-32 xl:block">
+          <div className="mb-1 flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-400">
               Reviewed
             </span>
-            <span className="font-bold text-slate-300 text-[11px]">
-              {analytics.acceptedCount + analytics.dismissedCount} / {analytics.totalFindings} ({analytics.completionPercentage}%)
+            <span className="text-xs font-semibold text-slate-300">
+              {analytics.acceptedCount + analytics.dismissedCount}/{analytics.totalFindings}
             </span>
           </div>
 
@@ -193,60 +150,66 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Right: Speed Review, Shortcuts, Reset, Export Audit, Profile */}
-      <div className="flex items-center gap-2 shrink-0">
+      {/* Right: Primary Actions and Profile */}
+      <div className="flex items-center gap-1.5 shrink-0">
 
         {/* Speed Review / Zen Mode */}
         <button
           type="button"
           onClick={() => setZenMode(!zenMode)}
-          className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+          className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-semibold transition-all cursor-pointer ${
             zenMode
               ? 'bg-indigo-600 text-white shadow-xs'
-              : 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700'
+              : 'text-slate-300 hover:bg-slate-800 hover:text-white'
           }`}
           title="Toggle Zen Speed Review Mode (Z)"
         >
           <Zap className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Speed Review</span>
-          <kbd className="hidden lg:inline text-[9px] px-1 bg-white/10 rounded">Z</kbd>
-        </button>
-
-        {/* Keyboard Shortcuts */}
-        <button
-          type="button"
-          onClick={() => toggleShortcutsModal(true)}
-          className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-          title="Keyboard Shortcuts (?)"
-        >
-          <Keyboard className="w-4 h-4" />
-        </button>
-
-        {/* Reset */}
-        <button
-          type="button"
-          onClick={handleReset}
-          className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-slate-800 transition-colors cursor-pointer"
-          title="Reset Review State"
-        >
-          <RotateCcw className="w-4 h-4" />
+          <kbd className="hidden lg:inline text-[10px] px-1 bg-white/10 rounded">Z</kbd>
         </button>
 
         {/* Export Audit */}
         <button
           type="button"
           onClick={() => toggleSummaryModal(true)}
-          className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-xs transition-colors hover:bg-indigo-500 cursor-pointer"
         >
           <Download className="w-3.5 h-3.5" />
-          <span>Export Audit</span>
+          <span className="hidden sm:inline">Export</span>
         </button>
 
-        <div className="h-4 w-px bg-slate-700 mx-0.5" />
+        <details className="relative">
+          <summary
+            className="flex cursor-pointer list-none items-center justify-center rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+            title="More review actions"
+            aria-label="More review actions"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </summary>
+          <div className="absolute right-0 top-full z-50 mt-2 w-52 rounded-xl border border-slate-700 bg-slate-900 p-1.5 shadow-lg">
+            <button
+              type="button"
+              onClick={() => toggleShortcutsModal(true)}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
+            >
+              <Keyboard className="h-4 w-4" />
+              Keyboard shortcuts
+            </button>
+            <button
+              type="button"
+              onClick={handleReset}
+              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-slate-300 transition-colors hover:bg-slate-800 hover:text-rose-300"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Reset review
+            </button>
+          </div>
+        </details>
 
         {/* Reviewer Profile */}
-        <div
-          onClick={() => navigate('/settings')}
+        <Link
+          to="/settings"
           className="flex items-center gap-1.5 pl-1 cursor-pointer hover:opacity-80 transition-opacity"
           title={`Reviewer: ${userSettings.reviewerName} (${userSettings.reviewerRole})`}
         >
@@ -254,14 +217,14 @@ export const Header: React.FC<HeaderProps> = ({
             {userSettings.reviewerName.charAt(0)}
           </div>
           <div className="hidden 2xl:flex flex-col leading-tight">
-            <span className="text-xs font-semibold text-white">
+            <span className="text-sm font-semibold text-white">
               {userSettings.reviewerName}
             </span>
-            <span className="text-[10px] text-slate-400">
+            <span className="text-xs text-slate-400">
               {userSettings.reviewerRole.split(' ')[0]}
             </span>
           </div>
-        </div>
+        </Link>
       </div>
     </header>
   );

@@ -1,26 +1,21 @@
 import React from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   FolderKanban,
   BarChart3,
   Settings,
   Scale,
-  ArrowRight,
+  Menu,
+  X,
 } from 'lucide-react';
 import { useReviewStore } from '../../store/useReviewStore';
-import { calculateRiskAnalytics } from '../../utils/riskCalculator';
 
 export const AppLayout: React.FC = () => {
-  const location = useLocation();
   const navigate = useNavigate();
-  const { contract, findings, reviews, userSettings } = useReviewStore();
+  const { userSettings } = useReviewStore();
+  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
-  const analytics = React.useMemo(() => {
-    return calculateRiskAnalytics(contract, findings, reviews);
-  }, [contract, findings, reviews]);
-
-  // Global Navigation: Exactly Dashboard, Documents, Reports & Analytics, Settings
   const navItems = [
     {
       to: '/',
@@ -48,92 +43,105 @@ export const AppLayout: React.FC = () => {
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 font-sans antialiased">
       {/* Global Enterprise Top Navigation Bar */}
-      <nav className="h-13 px-4 sm:px-6 bg-slate-900 border-b border-slate-800 text-white flex items-center justify-between gap-4 z-30 shrink-0 shadow-sm">
+      <nav className="relative z-30 grid h-15 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-b border-slate-800 bg-slate-900 px-3 text-white shadow-sm sm:px-6">
         {/* Brand Logo & Platform Title */}
-        <div className="flex items-center gap-6">
-          <div
-            onClick={() => navigate('/')}
-            className="flex items-center gap-2.5 cursor-pointer group select-none"
+        <div className="flex min-w-0 items-center justify-self-start">
+          <Link
+            to="/"
+            className="group flex min-w-0 items-center gap-2.5 select-none"
           >
-            <div className="w-7 h-7 rounded-lg bg-indigo-500 text-white flex items-center justify-center shadow-xs group-hover:bg-indigo-400 transition-colors">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-500 text-white shadow-xs transition-colors group-hover:bg-indigo-400">
               <Scale className="w-4 h-4" />
             </div>
-            <div className="flex flex-col">
+            <div className="flex min-w-0 flex-col">
               <div className="flex items-center gap-1.5 leading-none">
-                <span className="font-bold text-sm tracking-tight text-white">
+                <span className="font-bold text-base tracking-tight text-white">
                   Northwind
                 </span>
-                <span className="text-[10px] font-bold text-indigo-300 bg-indigo-500/20 px-1.5 py-0.5 rounded border border-indigo-400/30">
+                <span className="hidden rounded border border-indigo-400/30 bg-indigo-500/20 px-1.5 py-0.5 text-[11px] font-bold text-indigo-300 sm:inline">
                   LEGAL AI
                 </span>
               </div>
-              <span className="text-[10px] text-slate-400 font-medium tracking-wide">
+              <span className="text-[11px] text-slate-400 font-medium tracking-wide">
                 Contract Intelligence Platform
               </span>
             </div>
+          </Link>
+        </div>
+
+        {/* Centered Navigation */}
+        <div className="relative justify-self-center">
+          <div className="hidden items-center gap-1 md:flex">
+            {navItems.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.exact}
+                className={({ isActive }) =>
+                  `relative flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-all ${
+                    isActive
+                      ? 'bg-indigo-600 text-white shadow-xs font-bold'
+                      : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                  }`
+                }
+              >
+                <item.icon className="w-3.5 h-3.5" />
+                <span>{item.label}</span>
+              </NavLink>
+            ))}
           </div>
 
-          {/* Navigation Links: Dashboard, Documents, Reports & Analytics, Settings */}
-          <div className="hidden md:flex items-center gap-1">
-            {navItems.map((item) => {
-              const isActive = item.exact
-                ? location.pathname === item.to
-                : location.pathname.startsWith(item.to);
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="flex items-center gap-1.5 rounded-lg bg-slate-800 px-2.5 py-1.5 text-sm font-semibold text-slate-200 hover:bg-slate-700 md:hidden"
+            aria-expanded={mobileMenuOpen}
+            aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+          >
+            {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            <span>Menu</span>
+          </button>
 
-              return (
+          {mobileMenuOpen && (
+            <div className="absolute left-1/2 top-full z-50 mt-2 w-56 -translate-x-1/2 rounded-xl border border-slate-700 bg-slate-900 p-2 shadow-lg md:hidden">
+              {navItems.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
-                  className={`relative px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                    isActive
-                      ? 'text-white bg-indigo-600 shadow-xs font-bold'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
-                  }`}
+                  end={item.exact}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+                      isActive
+                        ? 'bg-indigo-600 text-white'
+                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                    }`
+                  }
                 >
-                  <item.icon className="w-3.5 h-3.5" />
+                  <item.icon className="h-4 w-4" />
                   <span>{item.label}</span>
                 </NavLink>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Right Section: Active Review Quick-Pill & Reviewer Profile */}
-        <div className="flex items-center gap-3">
-          {/* Quick jump to active MSA review workspace */}
-          <button
-            type="button"
-            onClick={() => navigate('/review/msa-northwind-brightline-2026')}
-            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors border border-slate-700 cursor-pointer"
-            title="Open active review in dedicated workspace"
-          >
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-rose-400 animate-pulse" />
-              <span className="font-semibold text-white">
-                Brightline MSA
-              </span>
-              <span className="text-[10px] text-slate-400">
-                ({analytics.residualRiskScore}/100 Risk)
-              </span>
-            </div>
-            <ArrowRight className="w-3 h-3 text-slate-400" />
-          </button>
-
-          {/* User Profile Tag */}
+        {/* Reviewer Profile */}
+        <div className="flex min-w-0 items-center justify-self-end">
           <div
             onClick={() => navigate('/settings')}
-            className="flex items-center gap-2 pl-2 border-l border-slate-700/80 cursor-pointer hover:opacity-90 transition-opacity"
-            title="User Profile & Settings"
+            className="flex min-w-0 items-center gap-2 cursor-pointer transition-opacity hover:opacity-90"
+            title={`Reviewer: ${userSettings.reviewerName} (${userSettings.reviewerRole})`}
           >
-            <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 text-white font-bold text-xs flex items-center justify-center shadow-xs">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 text-xs font-bold text-white shadow-xs">
               {userSettings.reviewerName.charAt(0)}
             </div>
-            <div className="hidden lg:flex flex-col text-left leading-tight">
-              <span className="text-xs font-semibold text-white">
+            <div className="hidden min-w-0 flex-col text-left leading-tight sm:flex">
+              <span className="text-sm font-semibold text-white">
                 {userSettings.reviewerName}
               </span>
-              <span className="text-[10px] text-slate-400">
-                {userSettings.reviewerRole.split(' ')[0]}
+              <span className="text-xs text-slate-400">
+                {userSettings.reviewerRole}
               </span>
             </div>
           </div>
