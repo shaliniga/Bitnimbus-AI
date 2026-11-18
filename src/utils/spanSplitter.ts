@@ -1,6 +1,7 @@
 import type { Finding, FindingSeverity } from '../types/finding';
 import type { ContractParagraph } from '../types/contract';
-import { normalizeText, resolveAnchorRange } from './textMatcher';
+import { normalizeText, resolveAnchorRange } from './textMatcher.ts';
+import type { TextEditOperation } from './amendments';
 
 export interface ParagraphFindingRange {
   finding: Finding;
@@ -19,6 +20,17 @@ export interface TextSegment {
   isOverlapping: boolean;
 }
 
+export function getNextOverlappingFindingId(
+  findingIds: string[],
+  selectedFindingId: string | null
+): string | null {
+  if (findingIds.length === 0) return null;
+  const selectedIndex = findingIds.indexOf(selectedFindingId ?? '');
+  const nextIndex =
+    selectedIndex < 0 ? 0 : (selectedIndex + 1) % findingIds.length;
+  return findingIds[nextIndex];
+}
+
 const SEVERITY_WEIGHT: Record<FindingSeverity, number> = {
   high: 3,
   medium: 2,
@@ -35,109 +47,143 @@ export function getParagraphFindingRanges(
   allParagraphs: ContractParagraph[]
 ): ParagraphFindingRange[] {
   const ranges: ParagraphFindingRange[] = [];
+  if (new Set(allParagraphs.map((paragraph) => paragraph.id)).size !== allParagraphs.length) {
+    return ranges;
+  }
+  const currentIndex = allParagraphs.findIndex(
+    (paragraph) => paragraph.id === paragraphId
+  );
+  if (currentIndex < 0) return ranges;
+  const currentParagraph = allParagraphs[currentIndex];
+  if (currentParagraph.text !== paragraphText) return ranges;
 
   for (const finding of findings) {
     if (!finding.anchor) continue;
 
     const { anchor } = finding;
+    const startIndex = allParagraphs.findIndex(
+      (paragraph) => paragraph.id === anchor.paragraphId
+    );
+    const endParagraphId = anchor.endParagraphId ?? anchor.paragraphId;
+    const endIndex = allParagraphs.findIndex(
+      (paragraph) => paragraph.id === endParagraphId
+    );
+    if (startIndex < 0 || endIndex < startIndex) continue;
 
-    // Case 1: Finding starts in this paragraph
-    if (anchor.paragraphId === paragraphId) {
-      if (!anchor.endParagraphId || anchor.endParagraphId === paragraphId) {
-        // Single paragraph anchor
-        const resolved = resolveAnchorRange(
-          paragraphText,
-          anchor.start,
-          anchor.end,
-          anchor.quote
-        );
+    if (startIndex === endIndex) {
+      if (currentIndex !== startIndex) continue;
+      const resolved = resolveAnchorRange(
+        paragraphText,
+        anchor.start,
+        anchor.end,
+        anchor.quote
+      );
+      if (resolved.exact && resolved.start < resolved.end) {
         ranges.push({
           finding,
           start: resolved.start,
           end: resolved.end,
           isCrossParagraph: false,
         });
-      } else {
-        const startIndex = allParagraphs.findIndex(
-          (paragraph) => paragraph.id === anchor.paragraphId
-        );
-        const endIndex = allParagraphs.findIndex(
-          (paragraph) => paragraph.id === anchor.endParagraphId
-        );
-        if (startIndex < 0 || endIndex <= startIndex) continue;
-
-        const startParagraph = allParagraphs[startIndex];
-        const endParagraph = allParagraphs[endIndex];
-        if (
-          !Number.isInteger(anchor.start) ||
-          !Number.isInteger(anchor.end) ||
-          anchor.start < 0 ||
-          anchor.start > startParagraph.text.length ||
-          anchor.end < 0 ||
-          anchor.end > endParagraph.text.length
-        ) {
-          continue;
-        }
-
-        const anchoredText = [
-          startParagraph.text.slice(anchor.start),
-          ...allParagraphs
-            .slice(startIndex + 1, endIndex)
-            .map((paragraph) => paragraph.text),
-          endParagraph.text.slice(0, anchor.end),
-        ].join(' ');
-        if (normalizeText(anchoredText) !== normalizeText(anchor.quote)) continue;
-
-        ranges.push({
-          finding,
-          start: anchor.start,
-          end: paragraphText.length,
-          isCrossParagraph: true,
-        });
       }
+      continue;
     }
-    // Case 2: Multi-paragraph anchor ends in this paragraph
-    else if (anchor.endParagraphId === paragraphId) {
-      const startIndex = allParagraphs.findIndex(
-        (paragraph) => paragraph.id === anchor.paragraphId
-      );
-      const endIndex = allParagraphs.findIndex(
-        (paragraph) => paragraph.id === anchor.endParagraphId
-      );
-      if (startIndex < 0 || endIndex <= startIndex) continue;
 
-      const startParagraph = allParagraphs[startIndex];
-      const endParagraph = allParagraphs[endIndex];
-      if (
-        !Number.isInteger(anchor.start) ||
-        !Number.isInteger(anchor.end) ||
-        anchor.start < 0 ||
-        anchor.start > startParagraph.text.length ||
-        anchor.end < 0 ||
-        anchor.end > endParagraph.text.length
-      ) {
-        continue;
-      }
-
-      const anchoredText = [
-        startParagraph.text.slice(anchor.start),
-        ...allParagraphs
-          .slice(startIndex + 1, endIndex)
-          .map((paragraph) => paragraph.text),
-        endParagraph.text.slice(0, anchor.end),
-      ].join(' ');
-      if (normalizeText(anchoredText) !== normalizeText(anchor.quote)) continue;
-
-      ranges.push({
-        finding,
-        start: 0,
-        end: anchor.end,
-        isCrossParagraph: true,
-      });
+    const startParagraph = allParagraphs[startIndex];
+    const endParagraph = allParagraphs[endIndex];
+    if (
+      !normalizeText(anchor.quote) ||
+      !Number.isInteger(anchor.start) ||
+      !Number.isInteger(anchor.end) ||
+      anchor.start < 0 ||
+      anchor.start > startParagraph.text.length ||
+      anchor.end < 0 ||
+      anchor.end > endParagraph.text.length
+    ) {
+      continue;
     }
+
+    const anchoredText = [
+      startParagraph.text.slice(anchor.start),
+      ...allParagraphs
+        .slice(startIndex + 1, endIndex)
+        .map((paragraph) => paragraph.text),
+      endParagraph.text.slice(0, anchor.end),
+    ].join(' ');
+    if (normalizeText(anchoredText) !== normalizeText(anchor.quote)) continue;
+
+    if (currentIndex < startIndex || currentIndex > endIndex) continue;
+    ranges.push({
+      finding,
+      start:
+        currentIndex === startIndex
+          ? anchor.start
+          : currentIndex === endIndex
+          ? 0
+          : 0,
+      end:
+        currentIndex === startIndex
+          ? paragraphText.length
+          : currentIndex === endIndex
+          ? anchor.end
+          : paragraphText.length,
+      isCrossParagraph: true,
+    });
   }
 
   return ranges;
+}
+
+function mapBoundaryThroughEdits(
+  offset: number,
+  isEnd: boolean,
+  operations: TextEditOperation[]
+): number {
+  let delta = 0;
+  for (const operation of [...operations].sort((a, b) => a.start - b.start)) {
+    if (offset < operation.start) break;
+    if (offset === operation.start) return operation.start + delta;
+    if (offset >= operation.end) {
+      delta += operation.replacement.length - (operation.end - operation.start);
+      continue;
+    }
+    return operation.start + delta + (isEnd ? operation.replacement.length : 0);
+  }
+  return offset + delta;
+}
+
+export function mapFindingRangesToAmendedText(
+  ranges: ParagraphFindingRange[],
+  paragraphId: string,
+  operations: TextEditOperation[]
+): ParagraphFindingRange[] {
+  const paragraphOperations = operations.filter(
+    (operation) => operation.paragraphId === paragraphId
+  );
+  if (paragraphOperations.length === 0) return ranges;
+
+  return ranges.map((range) => {
+    const ownEdit = paragraphOperations.find(
+      (operation) =>
+        operation.findingId === range.finding.id &&
+        operation.start === range.start &&
+        operation.end === range.end
+    );
+    if (ownEdit) {
+      const start = mapBoundaryThroughEdits(ownEdit.start, false, paragraphOperations);
+      return {
+        ...range,
+        start,
+        end: start + ownEdit.replacement.length,
+      };
+    }
+
+    return {
+      ...range,
+      start: mapBoundaryThroughEdits(range.start, false, paragraphOperations),
+      end: mapBoundaryThroughEdits(range.end, true, paragraphOperations),
+    };
+  });
 }
 
 /**

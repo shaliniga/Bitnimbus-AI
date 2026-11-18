@@ -13,7 +13,6 @@ export const KeyboardDock: React.FC = () => {
     selectedFindingId,
     reviews,
     setStatus,
-    applySuggestedEdit,
     nextFinding,
     prevFinding,
     toggleShortcutsModal,
@@ -71,16 +70,7 @@ export const KeyboardDock: React.FC = () => {
       <div className="flex items-center gap-2">
         <button
           type="button"
-          onClick={() => {
-            if (
-              currentFinding.suggestedEdit !== null &&
-              !reviewState.isEditApplied
-            ) {
-              applySuggestedEdit(currentFinding.id);
-            } else {
-              setStatus(currentFinding.id, 'accepted');
-            }
-          }}
+          onClick={() => setStatus(currentFinding.id, 'accepted')}
           className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
             reviewState.status === 'accepted'
               ? 'bg-emerald-500 text-white'

@@ -288,35 +288,53 @@ export const FindingCard: React.FC<FindingCardProps> = ({ finding, isSelected })
         {/* Action Buttons */}
         <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2">
-            {/* Accept / Apply button */}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (finding.suggestedEdit !== null && !isApplied) {
-                  applySuggestedEdit(finding.id);
-                } else {
+            {finding.suggestedEdit !== null ? (
+              <>
+                <button
+                  type="button"
+                  disabled={isApplied}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    applySuggestedEdit(finding.id);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer bg-indigo-50 text-indigo-700 hover:bg-indigo-600 hover:text-white dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-600 dark:hover:text-white border border-indigo-200 dark:border-indigo-800 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  <GitCompare className="w-3.5 h-3.5" />
+                  <span>{isApplied ? 'Amendment Applied' : 'Apply Amendment'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setStatus(finding.id, 'accepted');
+                  }}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                    isAccepted
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-600 dark:hover:text-white border border-emerald-200 dark:border-emerald-800'
+                  }`}
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Accept</span>
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
                   setStatus(finding.id, 'accepted');
-                }
-              }}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                isAccepted
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-600 dark:hover:text-white border border-emerald-200 dark:border-emerald-800'
-              }`}
-            >
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>
-                {finding.suggestedEdit !== null
-                  ? isApplied
-                    ? 'Applied'
-                    : 'Accept & Apply'
-                  : 'Accept'}
-              </span>
-              <kbd className="hidden sm:inline-block px-1 py-0.2 text-[9px] bg-emerald-200/50 dark:bg-emerald-800/60 rounded">
-                A
-              </kbd>
-            </button>
+                }}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  isAccepted
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-600 dark:hover:text-white border border-emerald-200 dark:border-emerald-800'
+                }`}
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Accept</span>
+              </button>
+            )}
 
             {/* Dismiss button */}
             <button

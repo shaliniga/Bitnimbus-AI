@@ -19,6 +19,7 @@ export const ZenReviewModal: React.FC = () => {
     contract,
     selectedFindingId,
     reviews,
+    originalParagraphs,
     setStatus,
     applySuggestedEdit,
     nextFinding,
@@ -41,6 +42,7 @@ export const ZenReviewModal: React.FC = () => {
   const reviewState = reviews[currentFinding.id] || { status: 'pending', notes: [] };
   const isAccepted = reviewState.status === 'accepted';
   const isDismissed = reviewState.status === 'dismissed';
+  const isApplied = reviewState.isEditApplied === true;
 
   // Find anchored paragraph text for context
   let paragraphText = '';
@@ -48,7 +50,7 @@ export const ZenReviewModal: React.FC = () => {
     for (const sec of contract.sections) {
       const p = sec.paragraphs.find((para) => para.id === currentFinding.anchor?.paragraphId);
       if (p) {
-        paragraphText = p.text;
+        paragraphText = originalParagraphs[p.id] ?? p.text;
         break;
       }
     }
@@ -219,12 +221,8 @@ export const ZenReviewModal: React.FC = () => {
             <button
               type="button"
               onClick={() => {
-                if (currentFinding.suggestedEdit !== null) {
-                  if (applySuggestedEdit(currentFinding.id)) nextFinding();
-                } else {
-                  setStatus(currentFinding.id, 'accepted');
-                  nextFinding();
-                }
+                setStatus(currentFinding.id, 'accepted');
+                nextFinding();
               }}
               className={`flex-1 py-3 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer ${
                 isAccepted
@@ -234,12 +232,23 @@ export const ZenReviewModal: React.FC = () => {
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>
-                {currentFinding.suggestedEdit !== null
-                  ? 'Accept & Apply Amendment'
-                  : 'Accept Finding'}
+                Accept Finding
               </span>
               <kbd className="px-1.5 py-0.5 text-[10px] bg-white/20 rounded">A</kbd>
             </button>
+
+            {currentFinding.suggestedEdit !== null && (
+              <button
+                type="button"
+                disabled={isApplied}
+                onClick={() => {
+                  if (applySuggestedEdit(currentFinding.id)) nextFinding();
+                }}
+                className="flex-1 rounded-xl border border-indigo-700 bg-indigo-950 px-4 py-3 text-xs font-bold text-indigo-200 transition-colors hover:bg-indigo-900 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isApplied ? 'Amendment Applied' : 'Apply Amendment'}
+              </button>
+            )}
 
             <button
               type="button"

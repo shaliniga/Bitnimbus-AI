@@ -4,9 +4,12 @@ import type { Finding, FindingSeverity } from '../../types/finding';
 import { useReviewStore } from '../../store/useReviewStore';
 import {
   getParagraphFindingRanges,
+  getNextOverlappingFindingId,
+  mapFindingRangesToAmendedText,
   splitParagraphIntoSegments,
   type TextSegment,
 } from '../../utils/spanSplitter';
+import { getAppliedEditOperations } from '../../utils/amendments';
 import { Check, RotateCcw, Layers } from 'lucide-react';
 
 interface ParagraphBlockProps {
@@ -35,17 +38,41 @@ export const ParagraphBlock: React.FC<ParagraphBlockProps> = ({
 
   // Split paragraph text into annotated segments
   const segments: TextSegment[] = useMemo(() => {
-    const allParagraphs = contract.sections.flatMap(
-      (section) => section.paragraphs
+    const allParagraphs = contract.sections
+      .flatMap((section) => section.paragraphs)
+      .map((item) => ({
+        ...item,
+        text: originalParagraphs[item.id] ?? item.text,
+      }));
+    const sourceParagraph = allParagraphs.find(
+      (item) => item.id === paragraph.id
     );
+    if (!sourceParagraph) return [];
+
     const ranges = getParagraphFindingRanges(
       paragraph.id,
-      paragraph.text,
+      sourceParagraph.text,
       findings,
       allParagraphs
     );
-    return splitParagraphIntoSegments(paragraph.text, ranges);
-  }, [contract.sections, paragraph.id, paragraph.text, findings]);
+    const appliedOperations = getAppliedEditOperations(
+      findings,
+      reviews,
+      allParagraphs,
+      originalParagraphs
+    );
+    return splitParagraphIntoSegments(
+      paragraph.text,
+      mapFindingRangesToAmendedText(ranges, paragraph.id, appliedOperations)
+    );
+  }, [
+    contract.sections,
+    paragraph.id,
+    paragraph.text,
+    findings,
+    originalParagraphs,
+    reviews,
+  ]);
 
   // Find if any finding applied an edit to this paragraph
   const appliedFinding = useMemo(() => {
@@ -144,50 +171,79 @@ export const ParagraphBlock: React.FC<ParagraphBlockProps> = ({
 
           const isCurrentSelected =
             selectedFindingId !== null && seg.findingIds.includes(selectedFindingId);
+          const annotationLabel =
+            seg.findings.length === 1
+              ? `Finding ${seg.findings[0].id}: ${seg.findings[0].title}`
+              : `${seg.findings.length} overlapping findings: ${seg.findings
+                  .map((finding) => `${finding.id}, ${finding.title}`)
+                  .join('; ')}. Press Enter or Space to cycle findings.`;
 
           return (
-            <span
-              key={idx}
-              className={`relative inline transition-all duration-150 rounded-2xs px-0.5 ${getSegmentStyles(
-                seg,
-                isCurrentSelected
-              )}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (seg.findingIds.length === 1) {
-                  selectFinding(seg.findingIds[0], paragraph.id);
-                } else {
-                  // If overlapping, toggle popover or select next
+            <span key={idx} className="relative inline">
+              <span
+                role="button"
+                tabIndex={0}
+                aria-label={annotationLabel}
+                aria-pressed={isCurrentSelected}
+                aria-expanded={
+                  seg.isOverlapping
+                    ? activeOverlapPopover === `${idx}`
+                    : undefined
+                }
+                className={`relative inline transition-all duration-150 rounded-2xs px-0.5 ${getSegmentStyles(
+                  seg,
+                  isCurrentSelected
+                )}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (seg.findingIds.length === 1) {
+                    selectFinding(seg.findingIds[0], paragraph.id);
+                    return;
+                  }
                   setActiveOverlapPopover(
                     activeOverlapPopover === `${idx}` ? null : `${idx}`
                   );
                   selectFinding(seg.findingIds[0], paragraph.id);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape' && activeOverlapPopover === `${idx}`) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setActiveOverlapPopover(null);
+                    return;
+                  }
+                  if (e.key !== 'Enter' && e.key !== ' ') return;
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const nextFindingId = getNextOverlappingFindingId(
+                    seg.findingIds,
+                    selectedFindingId
+                  );
+                  if (nextFindingId) selectFinding(nextFindingId, paragraph.id);
+                  if (seg.isOverlapping) setActiveOverlapPopover(`${idx}`);
+                }}
+                title={
+                  seg.findings.length === 1
+                    ? `[${seg.findings[0].severity.toUpperCase()}] ${seg.findings[0].title}`
+                    : `${seg.findings.length} overlapping findings`
                 }
-              }}
-              title={
-                seg.findings.length === 1
-                  ? `[${seg.findings[0].severity.toUpperCase()}] ${seg.findings[0].title}`
-                  : `${seg.findings.length} overlapping findings`
-              }
-            >
-              {seg.text}
+              >
+                {seg.text}
 
-              {/* Overlapping badge indicator */}
-              {seg.isOverlapping && (
-                <span className="inline-flex items-center gap-0.5 ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-sans font-bold bg-purple-600 text-white select-none align-middle shadow-2xs">
-                  <Layers className="w-2.5 h-2.5" />
-                  {seg.findingIds.length}
-                </span>
-              )}
+                {seg.isOverlapping && (
+                  <span className="inline-flex items-center gap-0.5 ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-sans font-bold bg-purple-600 text-white select-none align-middle shadow-2xs">
+                    <Layers className="w-2.5 h-2.5" />
+                    {seg.findingIds.length}
+                  </span>
+                )}
 
-              {/* Single finding badge when selected */}
-              {isCurrentSelected && !seg.isOverlapping && (
-                <span className="inline-flex items-center gap-0.5 ml-1 px-1.5 py-0.2 rounded text-[10px] font-sans font-bold bg-indigo-600 text-white select-none align-middle shadow-2xs">
-                  #{selectedFindingId}
-                </span>
-              )}
+                {isCurrentSelected && !seg.isOverlapping && (
+                  <span className="inline-flex items-center gap-0.5 ml-1 px-1.5 py-0.2 rounded text-[10px] font-sans font-bold bg-indigo-600 text-white select-none align-middle shadow-2xs">
+                    #{selectedFindingId}
+                  </span>
+                )}
+              </span>
 
-              {/* Overlapping Findings Popup Menu */}
               {activeOverlapPopover === `${idx}` && (
                 <span
                   className="absolute left-0 bottom-full mb-1 z-30 w-64 p-2 bg-white dark:bg-slate-900 rounded-lg shadow-xl border border-slate-200 dark:border-slate-800 text-xs font-sans block"

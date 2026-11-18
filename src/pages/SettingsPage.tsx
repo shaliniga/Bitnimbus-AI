@@ -42,7 +42,7 @@ export const SettingsPage: React.FC = () => {
   const handleResetWorkspace = () => {
     if (
       window.confirm(
-        'Are you sure you want to reset all review statuses, notes, and accepted amendments back to default?'
+        'Are you sure you want to reset all review statuses, notes, and applied amendments back to default?'
       )
     ) {
       resetAllReviews();
@@ -187,7 +187,7 @@ export const SettingsPage: React.FC = () => {
                   Auto-Save Review Drafts in LocalStorage
                 </span>
                 <span className="text-[11px] text-slate-400">
-                  Preserve accepted amendments and collaboration notes across page reloads
+                  Preserve review statuses, notes, and applied amendments across page reloads
                 </span>
               </div>
               <input

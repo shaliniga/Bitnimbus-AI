@@ -1,13 +1,10 @@
 import { useEffect } from 'react';
 import { useReviewStore } from '../store/useReviewStore';
 
-export function useKeyboardNavigation() {
+export function useKeyboardNavigation(enabled = true) {
   const {
     selectedFindingId,
-    findings,
-    reviews,
     setStatus,
-    applySuggestedEdit,
     nextFinding,
     prevFinding,
     zenMode,
@@ -19,6 +16,8 @@ export function useKeyboardNavigation() {
   } = useReviewStore();
 
   useEffect(() => {
+    if (!enabled) return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       // Don't intercept when user is typing in form inputs
       const target = e.target as HTMLElement;
@@ -70,16 +69,7 @@ export function useKeyboardNavigation() {
       if (e.key === 'a' || e.key === 'A') {
         if (!selectedFindingId) return;
         e.preventDefault();
-        const finding = findings.find((f) => f.id === selectedFindingId);
-        if (
-          finding?.suggestedEdit !== null &&
-          finding?.suggestedEdit !== undefined &&
-          !reviews[finding.id]?.isEditApplied
-        ) {
-          applySuggestedEdit(finding.id);
-        } else {
-          setStatus(selectedFindingId, 'accepted');
-        }
+        setStatus(selectedFindingId, 'accepted');
         return;
       }
 
@@ -96,10 +86,8 @@ export function useKeyboardNavigation() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [
     selectedFindingId,
-    findings,
-    reviews,
+    enabled,
     setStatus,
-    applySuggestedEdit,
     nextFinding,
     prevFinding,
     zenMode,

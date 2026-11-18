@@ -30,12 +30,14 @@ export const ReportsPage: React.FC = () => {
     return calculateRiskAnalytics(contract, findings, reviews);
   }, [contract, findings, reviews]);
 
-  const acceptedFindings = findings.filter((f) => reviews[f.id]?.status === 'accepted');
+  const appliedAmendments = findings.filter(
+    (f) => reviews[f.id]?.isEditApplied && f.suggestedEdit !== null
+  );
 
   // Chart 1: Status Resolution Breakdown (Pie)
   const statusPieData = useMemo(() => {
     return [
-      { name: 'Accepted & Mitigated', count: analytics.acceptedCount, color: '#10b981' },
+      { name: 'Accepted', count: analytics.acceptedCount, color: '#10b981' },
       { name: 'Dismissed Risk', count: analytics.dismissedCount, color: '#64748b' },
       { name: 'Pending Review', count: analytics.pendingCount, color: '#f59e0b' },
     ];
@@ -68,8 +70,8 @@ export const ReportsPage: React.FC = () => {
     md += `- Initial Risk Score: ${analytics.initialRiskScore}/100\n`;
     md += `- Residual Risk Score: ${analytics.residualRiskScore}/100 (${analytics.riskLevel})\n`;
     md += `- Status: ${analytics.acceptedCount} Accepted, ${analytics.dismissedCount} Dismissed, ${analytics.pendingCount} Pending\n\n`;
-    md += `## Accepted Amendments\n\n`;
-    acceptedFindings.forEach((f) => {
+    md += `## Applied Amendments\n\n`;
+    appliedAmendments.forEach((f) => {
       md += `### [${f.id}] § ${f.anchor ? f.anchor.paragraphId.replace('p-', '') : 'Doc-Wide'} — ${f.title}\n`;
       if (f.suggestedEdit !== null) md += `**Agreed Amendment:** "${f.suggestedEdit}"\n\n`;
     });
@@ -192,13 +194,13 @@ export const ReportsPage: React.FC = () => {
 
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-1">
-            Accepted Amendments
+            Accepted Findings
           </span>
           <div className="text-3xl font-extrabold text-emerald-600">
             {analytics.acceptedCount}
           </div>
           <span className="text-[11px] text-slate-400 mt-2 block">
-            Replacement text applied to contract
+            Reviewer disposition recorded
           </span>
         </div>
 
@@ -234,7 +236,7 @@ export const ReportsPage: React.FC = () => {
           <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-1">
             Review Status Breakdown
           </h3>
-          <p className="text-xs text-slate-500 mb-4">Disposition of AI-generated findings</p>
+          <p className="text-xs text-slate-500 mb-4">Disposition of bundled sample findings</p>
 
           <div className="h-56 w-full flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
@@ -356,10 +358,10 @@ export const ReportsPage: React.FC = () => {
           <div>
             <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <FileCheck2 className="w-4 h-4 text-emerald-600" />
-              Schedule of Negotiated Amendments ({acceptedFindings.length})
+              Schedule of Applied Amendments ({appliedAmendments.length})
             </h3>
             <p className="text-xs text-slate-500">
-              Contract amendments accepted for inclusion into the vendor counter-proposal
+              Suggested text currently applied to the review copy
             </p>
           </div>
           <span className="text-xs font-mono text-slate-400">
@@ -367,13 +369,13 @@ export const ReportsPage: React.FC = () => {
           </span>
         </div>
 
-        {acceptedFindings.length === 0 ? (
+        {appliedAmendments.length === 0 ? (
           <div className="p-6 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-dashed border-slate-200 dark:border-slate-800 text-center text-xs text-slate-400">
-            No amendments have been accepted yet. As you review issues in the Review Workspace and click "Accept & Apply", proposed clauses will appear here.
+            No amendments have been applied. Accepting a finding does not apply its suggested text.
           </div>
         ) : (
           <div className="space-y-3">
-            {acceptedFindings.map((f) => (
+            {appliedAmendments.map((f) => (
               <div
                 key={f.id}
                 className="p-4 rounded-xl border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/20 dark:bg-emerald-950/20 text-xs space-y-2"

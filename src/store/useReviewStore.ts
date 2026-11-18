@@ -8,12 +8,28 @@ import type {
   FilterState,
   FindingsDataset,
 } from '../types/finding';
-import type { DocumentItem, ActivityLogItem } from '../types/document';
-import { normalizeText, resolveAnchorRange } from '../utils/textMatcher';
-import { calculateRiskAnalytics } from '../utils/riskCalculator';
+import type {
+  DocumentItem,
+  ActivityLogItem,
+  DocumentRiskLevel,
+  DocumentReviewStatus,
+} from '../types/document';
+import { calculateRiskAnalytics } from '../utils/riskCalculator.ts';
+import {
+  applyTextEditOperations,
+  buildFindingEditOperations,
+  hasConflictingEdits,
+  type TextEditOperation,
+} from '../utils/amendments.ts';
+import {
+  isRecord,
+  restoreReviewDraft,
+  sanitizeOriginalParagraphs,
+  sanitizeReviews,
+} from '../utils/reviewPersistence.ts';
 
-import initialContractData from '../assets/sample-contract.json';
-import initialFindingsData from '../assets/findings.json';
+import initialContractData from '../assets/sample-contract.json' with { type: 'json' };
+import initialFindingsData from '../assets/findings.json' with { type: 'json' };
 
 export interface UserSettings {
   reviewerName: string;
@@ -89,14 +105,6 @@ const initialContract = initialContractData as unknown as ContractDocument;
 const initialFindingsDataset = initialFindingsData as unknown as FindingsDataset;
 const initialFindings = initialFindingsDataset.findings;
 
-interface TextEditOperation {
-  findingId: string;
-  paragraphId: string;
-  start: number;
-  end: number;
-  replacement: string;
-}
-
 function cloneContract(contract: ContractDocument): ContractDocument {
   return {
     ...contract,
@@ -104,158 +112,6 @@ function cloneContract(contract: ContractDocument): ContractDocument {
     sections: contract.sections.map((section) => ({
       ...section,
       paragraphs: section.paragraphs.map((paragraph) => ({ ...paragraph })),
-    })),
-  };
-}
-
-function buildFindingEditOperations(
-  finding: Finding,
-  contract: ContractDocument,
-  originalParagraphs: Record<string, string>
-): TextEditOperation[] | null {
-  const anchor = finding.anchor;
-  if (!anchor || finding.suggestedEdit === null) return null;
-
-  const paragraphs = contract.sections.flatMap((section) => section.paragraphs);
-  const startIndex = paragraphs.findIndex(
-    (paragraph) => paragraph.id === anchor.paragraphId
-  );
-  if (startIndex === -1) return null;
-
-  const startParagraph = paragraphs[startIndex];
-  const startText =
-    originalParagraphs[startParagraph.id] ?? startParagraph.text;
-
-  if (anchor.endParagraphId && anchor.endParagraphId !== anchor.paragraphId) {
-    const endIndex = paragraphs.findIndex(
-      (paragraph) => paragraph.id === anchor.endParagraphId
-    );
-    if (endIndex <= startIndex) return null;
-
-    const endParagraph = paragraphs[endIndex];
-    const endText = originalParagraphs[endParagraph.id] ?? endParagraph.text;
-    if (
-      !Number.isInteger(anchor.start) ||
-      !Number.isInteger(anchor.end) ||
-      anchor.start < 0 ||
-      anchor.start > startText.length ||
-      anchor.end < 0 ||
-      anchor.end > endText.length
-    ) {
-      return null;
-    }
-
-    const matchedText = [
-      startText.slice(anchor.start),
-      ...paragraphs
-        .slice(startIndex + 1, endIndex)
-        .map((paragraph) => originalParagraphs[paragraph.id] ?? paragraph.text),
-      endText.slice(0, anchor.end),
-    ].join(' ');
-    if (normalizeText(matchedText) !== normalizeText(anchor.quote)) return null;
-
-    const operations: TextEditOperation[] = [
-      {
-        findingId: finding.id,
-        paragraphId: startParagraph.id,
-        start: anchor.start,
-        end: startText.length,
-        replacement: finding.suggestedEdit,
-      },
-    ];
-
-    for (const paragraph of paragraphs.slice(startIndex + 1, endIndex)) {
-      const paragraphText =
-        originalParagraphs[paragraph.id] ?? paragraph.text;
-      operations.push({
-        findingId: finding.id,
-        paragraphId: paragraph.id,
-        start: 0,
-        end: paragraphText.length,
-        replacement: '',
-      });
-    }
-
-    operations.push({
-      findingId: finding.id,
-      paragraphId: endParagraph.id,
-      start: 0,
-      end: anchor.end,
-      replacement: '',
-    });
-    return operations;
-  }
-
-  const range = resolveAnchorRange(
-    startText,
-    anchor.start,
-    anchor.end,
-    anchor.quote
-  );
-  if (!range.exact || range.start === range.end) return null;
-
-  return [
-    {
-      findingId: finding.id,
-      paragraphId: startParagraph.id,
-      start: range.start,
-      end: range.end,
-      replacement: finding.suggestedEdit,
-    },
-  ];
-}
-
-function hasConflictingEdits(operations: TextEditOperation[]): boolean {
-  for (let index = 0; index < operations.length; index++) {
-    for (let otherIndex = index + 1; otherIndex < operations.length; otherIndex++) {
-      const current = operations[index];
-      const other = operations[otherIndex];
-      if (
-        current.findingId !== other.findingId &&
-        current.paragraphId === other.paragraphId &&
-        current.start < other.end &&
-        other.start < current.end
-      ) {
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-function applyTextEditOperations(
-  contract: ContractDocument,
-  originalParagraphs: Record<string, string>,
-  operations: TextEditOperation[],
-  affectedParagraphs: Set<string>
-): ContractDocument {
-  const operationsByParagraph = new Map<string, TextEditOperation[]>();
-  for (const operation of operations) {
-    const paragraphOperations =
-      operationsByParagraph.get(operation.paragraphId) || [];
-    paragraphOperations.push(operation);
-    operationsByParagraph.set(operation.paragraphId, paragraphOperations);
-  }
-
-  return {
-    ...contract,
-    sections: contract.sections.map((section) => ({
-      ...section,
-      paragraphs: section.paragraphs.map((paragraph) => {
-        if (!affectedParagraphs.has(paragraph.id)) return { ...paragraph };
-
-        let text = originalParagraphs[paragraph.id] ?? paragraph.text;
-        const paragraphOperations = operationsByParagraph.get(paragraph.id) || [];
-        for (const operation of [...paragraphOperations].sort(
-          (a, b) => b.start - a.start
-        )) {
-          text =
-            text.slice(0, operation.start) +
-            operation.replacement +
-            text.slice(operation.end);
-        }
-        return { ...paragraph, text };
-      }),
     })),
   };
 }
@@ -276,7 +132,6 @@ const initialDocuments: DocumentItem[] = [
     dismissedCount: 0,
     pendingCount: 24,
     isPrimary: true,
-    fileSize: '2.4 MB',
     tags: ['Data Processing', 'Analytics', 'Vendor SOW'],
   },
   {
@@ -287,13 +142,12 @@ const initialDocuments: DocumentItem[] = [
     counterparty: 'Northwind Analytics, Inc.',
     uploadDate: '2026-03-04',
     effectiveDate: '2026-03-15',
-    riskLevel: 'Critical',
-    status: 'Pending Review',
-    findingCount: 19,
+    riskLevel: 'Unassessed',
+    status: 'Demo Only',
+    findingCount: 0,
     acceptedCount: 0,
     dismissedCount: 0,
-    pendingCount: 19,
-    fileSize: '1.8 MB',
+    pendingCount: 0,
     tags: ['Infosec', 'SOC2', 'Penetration Testing'],
   },
   {
@@ -304,13 +158,12 @@ const initialDocuments: DocumentItem[] = [
     counterparty: 'Northwind Analytics, Inc.',
     uploadDate: '2026-02-18',
     effectiveDate: '2026-03-01',
-    riskLevel: 'High',
-    status: 'In Progress',
-    findingCount: 14,
-    acceptedCount: 5,
-    dismissedCount: 3,
-    pendingCount: 6,
-    fileSize: '1.2 MB',
+    riskLevel: 'Unassessed',
+    status: 'Demo Only',
+    findingCount: 0,
+    acceptedCount: 0,
+    dismissedCount: 0,
+    pendingCount: 0,
     tags: ['AI Infrastructure', '99.9% Uptime', 'LLM API'],
   },
   {
@@ -321,13 +174,12 @@ const initialDocuments: DocumentItem[] = [
     counterparty: 'Northwind Analytics, Inc.',
     uploadDate: '2026-02-24',
     effectiveDate: '2026-02-28',
-    riskLevel: 'Moderate',
-    status: 'Completed',
-    findingCount: 8,
-    acceptedCount: 7,
-    dismissedCount: 1,
+    riskLevel: 'Unassessed',
+    status: 'Demo Only',
+    findingCount: 0,
+    acceptedCount: 0,
+    dismissedCount: 0,
     pendingCount: 0,
-    fileSize: '950 KB',
     tags: ['GDPR', 'Standard Contractual Clauses', 'Privacy'],
   },
   {
@@ -338,13 +190,12 @@ const initialDocuments: DocumentItem[] = [
     counterparty: 'Northwind Analytics, Inc.',
     uploadDate: '2026-01-15',
     effectiveDate: '2026-01-20',
-    riskLevel: 'Low',
-    status: 'Completed',
-    findingCount: 3,
-    acceptedCount: 2,
-    dismissedCount: 1,
+    riskLevel: 'Unassessed',
+    status: 'Demo Only',
+    findingCount: 0,
+    acceptedCount: 0,
+    dismissedCount: 0,
     pendingCount: 0,
-    fileSize: '420 KB',
     tags: ['M&A', 'Due Diligence', 'Confidentiality'],
   },
 ];
@@ -354,34 +205,12 @@ const initialActivities: ActivityLogItem[] = [
     id: 'act-1',
     documentId: 'msa-northwind-brightline-2026',
     documentName: 'Master Services Agreement',
-    type: 'amend',
-    title: 'AI Contract Review Generated',
+    type: 'system',
+    title: 'Sample MSA Findings Loaded',
     description: `${initialFindings.length} findings identified across ${initialContract.sections.length} sections.`,
     author: 'AI Review Agent',
     timestamp: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
     severity: 'high',
-  },
-  {
-    id: 'act-2',
-    documentId: 'dpa-cloudscale-2026',
-    documentName: 'Data Processing Addendum',
-    type: 'accept',
-    title: 'Review Finalized & Approved',
-    description: '7 privacy amendments accepted, 1 low-risk clause dismissed.',
-    author: 'Sarah Chen (Lead Counsel)',
-    timestamp: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
-    severity: 'low',
-  },
-  {
-    id: 'act-3',
-    documentId: 'sla-vertex-ai-2026',
-    documentName: 'AI Model Hosting SLA',
-    type: 'note',
-    title: 'Uptime Remedy Flagged',
-    description: 'Added negotiation note regarding 99.9% monthly availability credits.',
-    author: 'Marcus Vance (Legal Ops)',
-    timestamp: new Date(Date.now() - 1000 * 60 * 360).toISOString(),
-    severity: 'medium',
   },
 ];
 
@@ -396,6 +225,183 @@ const defaultSettings: UserSettings = {
   autoSaveReviewDrafts: true,
   exportFormat: 'markdown',
 };
+
+function sanitizeUserSettings(
+  value: unknown,
+  defaults: UserSettings
+): UserSettings {
+  if (!isRecord(value)) return defaults;
+  return {
+    reviewerName:
+      typeof value.reviewerName === 'string'
+        ? value.reviewerName
+        : defaults.reviewerName,
+    reviewerRole:
+      typeof value.reviewerRole === 'string'
+        ? value.reviewerRole
+        : defaults.reviewerRole,
+    email: typeof value.email === 'string' ? value.email : defaults.email,
+    department:
+      typeof value.department === 'string'
+        ? value.department
+        : defaults.department,
+    theme:
+      value.theme === 'light' || value.theme === 'dark' || value.theme === 'system'
+        ? value.theme
+        : defaults.theme,
+    emailNotifications:
+      typeof value.emailNotifications === 'boolean'
+        ? value.emailNotifications
+        : defaults.emailNotifications,
+    highRiskAlerts:
+      typeof value.highRiskAlerts === 'boolean'
+        ? value.highRiskAlerts
+        : defaults.highRiskAlerts,
+    autoSaveReviewDrafts:
+      typeof value.autoSaveReviewDrafts === 'boolean'
+        ? value.autoSaveReviewDrafts
+        : defaults.autoSaveReviewDrafts,
+    exportFormat:
+      value.exportFormat === 'markdown' ||
+      value.exportFormat === 'json' ||
+      value.exportFormat === 'pdf'
+        ? value.exportFormat
+        : defaults.exportFormat,
+  };
+}
+
+function sanitizeDocument(value: unknown): DocumentItem | null {
+  if (
+    !isRecord(value) ||
+    typeof value.id !== 'string' ||
+    typeof value.name !== 'string' ||
+    typeof value.type !== 'string' ||
+    typeof value.vendor !== 'string' ||
+    typeof value.counterparty !== 'string' ||
+    typeof value.uploadDate !== 'string' ||
+    typeof value.effectiveDate !== 'string'
+  ) {
+    return null;
+  }
+  const riskLevels: DocumentRiskLevel[] = [
+    'Critical',
+    'High',
+    'Moderate',
+    'Low',
+    'Unassessed',
+  ];
+  const statuses: DocumentReviewStatus[] = [
+    'Pending Review',
+    'In Progress',
+    'Completed',
+    'Demo Only',
+  ];
+  const count = (countValue: unknown) =>
+    typeof countValue === 'number' && Number.isFinite(countValue) && countValue >= 0
+      ? countValue
+      : 0;
+
+  return {
+    id: value.id,
+    name: value.name,
+    type: value.type,
+    vendor: value.vendor,
+    counterparty: value.counterparty,
+    uploadDate: value.uploadDate,
+    effectiveDate: value.effectiveDate,
+    riskLevel: riskLevels.includes(value.riskLevel as DocumentRiskLevel)
+      ? (value.riskLevel as DocumentRiskLevel)
+      : 'Unassessed',
+    status: statuses.includes(value.status as DocumentReviewStatus)
+      ? (value.status as DocumentReviewStatus)
+      : 'Demo Only',
+    findingCount: count(value.findingCount),
+    acceptedCount: count(value.acceptedCount),
+    dismissedCount: count(value.dismissedCount),
+    pendingCount: count(value.pendingCount),
+    ...(value.id === initialContract.id ? { isPrimary: true } : {}),
+    ...(typeof value.fileSize === 'string' ? { fileSize: value.fileSize } : {}),
+    ...(Array.isArray(value.tags)
+      ? { tags: value.tags.filter((tag): tag is string => typeof tag === 'string') }
+      : {}),
+  };
+}
+
+function sanitizeActivity(value: unknown): ActivityLogItem | null {
+  if (
+    !isRecord(value) ||
+    typeof value.id !== 'string' ||
+    typeof value.documentId !== 'string' ||
+    typeof value.documentName !== 'string' ||
+    typeof value.title !== 'string' ||
+    typeof value.description !== 'string' ||
+    typeof value.author !== 'string' ||
+    typeof value.timestamp !== 'string' ||
+    !['accept', 'dismiss', 'note', 'amend', 'upload', 'revert', 'system'].includes(
+      value.type as string
+    )
+  ) {
+    return null;
+  }
+  const severity =
+    value.severity === 'high' ||
+    value.severity === 'medium' ||
+    value.severity === 'low'
+      ? value.severity
+      : undefined;
+  return {
+    id: value.id,
+    documentId: value.documentId,
+    documentName: value.documentName,
+    type: value.type as ActivityLogItem['type'],
+    title: value.title,
+    description: value.description,
+    author: value.author,
+    timestamp: value.timestamp,
+    ...(severity ? { severity } : {}),
+  };
+}
+
+function sanitizeDocuments(
+  value: unknown,
+  fallback: DocumentItem[]
+): DocumentItem[] {
+  const parsed = Array.isArray(value)
+    ? value
+        .map(sanitizeDocument)
+        .filter((document): document is DocumentItem => document !== null)
+    : fallback;
+  const canonicalDocuments = parsed.map((document) =>
+    document.id === initialContract.id
+      ? initialDocuments[0]
+      : { ...document, isPrimary: false }
+  );
+  const uniqueDocuments = Array.from(
+    new Map(canonicalDocuments.map((document) => [document.id, document])).values()
+  );
+  return uniqueDocuments.some((document) => document.id === initialContract.id)
+    ? uniqueDocuments
+    : [initialDocuments[0], ...uniqueDocuments];
+}
+
+function sanitizeActivityLog(
+  value: unknown,
+  fallback: ActivityLogItem[]
+): ActivityLogItem[] {
+  if (!Array.isArray(value)) return fallback;
+  return value
+    .map(sanitizeActivity)
+    .filter(
+      (activity): activity is ActivityLogItem =>
+        activity !== null &&
+        (activity.documentId === initialContract.id || activity.type === 'upload')
+    )
+    .map((activity) =>
+      activity.documentId === initialContract.id
+        ? { ...activity, documentName: initialDocuments[0].name }
+        : activity
+    );
+}
 
 export const useReviewStore = create<ReviewStoreState>()(
   persist(
@@ -583,7 +589,7 @@ export const useReviewStore = create<ReviewStoreState>()(
           if (!candidateReviews[candidate.id]?.isEditApplied) continue;
           const candidateOperations = buildFindingEditOperations(
             candidate,
-            state.contract,
+            state.contract.sections.flatMap((section) => section.paragraphs),
             state.originalParagraphs
           );
           if (!candidateOperations) {
@@ -633,7 +639,6 @@ export const useReviewStore = create<ReviewStoreState>()(
             ...state.reviews,
             [findingId]: {
               ...currentReview,
-              status: 'accepted',
               isEditApplied: true,
               appliedText: finding.suggestedEdit,
               editError: undefined,
@@ -679,7 +684,7 @@ export const useReviewStore = create<ReviewStoreState>()(
           if (!reviews[candidate.id]?.isEditApplied) continue;
           const candidateOperations = buildFindingEditOperations(
             candidate,
-            state.contract,
+            state.contract.sections.flatMap((section) => section.paragraphs),
             state.originalParagraphs
           );
           if (candidateOperations) remainingOperations.push(...candidateOperations);
@@ -814,7 +819,7 @@ export const useReviewStore = create<ReviewStoreState>()(
         else if (totalReviewed > 0) status = 'In Progress';
 
         return documents.map((doc) => {
-          if (doc.isPrimary) {
+          if (doc.isPrimary && doc.id === initialContract.id) {
             return {
               ...doc,
               acceptedCount: accepted,
@@ -824,7 +829,17 @@ export const useReviewStore = create<ReviewStoreState>()(
               riskLevel: analytics.riskLevel,
             };
           }
-          return doc;
+          return {
+            ...doc,
+            isPrimary: false,
+            acceptedCount: 0,
+            dismissedCount: 0,
+            pendingCount: 0,
+            findingCount: 0,
+            riskLevel: 'Unassessed',
+            status: 'Demo Only',
+            fileSize: undefined,
+          };
         });
       },
 
@@ -919,76 +934,108 @@ export const useReviewStore = create<ReviewStoreState>()(
         activityLog: state.activityLog,
         userSettings: state.userSettings,
       }),
-      version: 1,
+      version: 2,
       migrate: (persistedState, version) => {
-        const persisted = persistedState as Partial<ReviewStoreState>;
-        if (version >= 1) return persisted as ReviewStoreState;
-
-        const reviews = { ...(persisted.reviews || {}) };
-        const originalParagraphs = {
-          ...(persisted.originalParagraphs || {}),
-        };
-        if (persisted.userSettings?.autoSaveReviewDrafts === false) {
-          return {
-            ...persisted,
-            contract: cloneContract(initialContract),
-            reviews: {},
-            originalParagraphs: {},
-          } as ReviewStoreState;
-        }
-
-        const contract = cloneContract(initialContract);
-        const operations: TextEditOperation[] = [];
-        for (const finding of initialFindings) {
-          if (!reviews[finding.id]?.isEditApplied) continue;
-          const findingOperations = buildFindingEditOperations(
-            finding,
-            contract,
-            originalParagraphs
-          );
-          if (
-            !findingOperations ||
-            hasConflictingEdits([...operations, ...findingOperations])
-          ) {
-            reviews[finding.id] = {
-              ...reviews[finding.id],
-              isEditApplied: false,
-              appliedText: undefined,
-              editError:
-                'This saved amendment could not be restored because its clause is missing or overlaps another edit.',
-            };
-            continue;
-          }
-          operations.push(...findingOperations);
-        }
-
-        const affectedParagraphs = new Set(
-          operations.map((operation) => operation.paragraphId)
+        const persisted = isRecord(persistedState) ? persistedState : {};
+        const userSettings = sanitizeUserSettings(
+          persisted.userSettings,
+          defaultSettings
         );
-        for (const paragraphId of affectedParagraphs) {
-          if (originalParagraphs[paragraphId] !== undefined) continue;
-          for (const section of contract.sections) {
-            const paragraph = section.paragraphs.find(
-              (item) => item.id === paragraphId
-            );
-            if (paragraph) {
-              originalParagraphs[paragraphId] = paragraph.text;
-              break;
-            }
-          }
+        let reviews = userSettings.autoSaveReviewDrafts
+          ? sanitizeReviews(persisted.reviews, initialFindings)
+          : {};
+        if (version < 2) {
+          reviews = Object.fromEntries(
+            Object.entries(reviews).map(([findingId, review]) => [
+              findingId,
+              review.isEditApplied && review.status === 'accepted'
+                ? { ...review, status: 'pending' }
+                : review,
+            ])
+          );
         }
+        const originals = userSettings.autoSaveReviewDrafts
+          ? sanitizeOriginalParagraphs(
+              persisted.originalParagraphs,
+              initialContract
+            )
+          : {};
+        const restoredDraft = restoreReviewDraft(
+          cloneContract(initialContract),
+          initialFindings,
+          reviews,
+          originals
+        );
+        const documents = sanitizeDocuments(
+          persisted.documents,
+          initialDocuments
+        );
+        const activityLog = sanitizeActivityLog(
+          persisted.activityLog,
+          initialActivities
+        );
 
         return {
-          ...persisted,
-          contract: applyTextEditOperations(
-            contract,
-            originalParagraphs,
-            operations,
-            affectedParagraphs
-          ),
+          ...restoredDraft,
+          zenMode:
+            typeof persisted.zenMode === 'boolean' ? persisted.zenMode : false,
+          documents,
+          activityLog,
+          userSettings,
+        };
+      },
+      onRehydrateStorage: () => (_state, error) => {
+        if (error) {
+          console.error(
+            'Unable to restore saved review data. Default review state is active.',
+            error
+          );
+        }
+      },
+      merge: (persistedState, currentState) => {
+        const persisted = isRecord(persistedState) ? persistedState : {};
+        const userSettings = sanitizeUserSettings(
+          persisted.userSettings,
+          currentState.userSettings
+        );
+        const autosaveEnabled = userSettings.autoSaveReviewDrafts;
+        const reviews = autosaveEnabled
+          ? sanitizeReviews(persisted.reviews, initialFindings)
+          : {};
+        const savedOriginalParagraphs = autosaveEnabled
+          ? sanitizeOriginalParagraphs(
+              persisted.originalParagraphs,
+              initialContract
+            )
+          : {};
+        const restoredDraft = restoreReviewDraft(
+          cloneContract(initialContract),
+          initialFindings,
           reviews,
-          originalParagraphs,
-        } as ReviewStoreState;
+          savedOriginalParagraphs
+        );
+
+        const documents = sanitizeDocuments(
+          persisted.documents,
+          currentState.documents
+        );
+        const activityLog = sanitizeActivityLog(
+          persisted.activityLog,
+          currentState.activityLog
+        );
+
+        return {
+          ...currentState,
+          ...restoredDraft,
+          reviews: restoredDraft.reviews,
+          documents,
+          activityLog,
+          userSettings,
+          zenMode:
+            typeof persisted.zenMode === 'boolean'
+              ? persisted.zenMode
+              : currentState.zenMode,
+        };
       },
     }
   )

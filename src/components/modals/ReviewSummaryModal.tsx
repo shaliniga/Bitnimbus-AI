@@ -33,7 +33,9 @@ export const ReviewSummaryModal: React.FC = () => {
 
   if (!showSummaryModal) return null;
 
-  const acceptedFindings = findings.filter((f) => reviews[f.id]?.status === 'accepted');
+  const appliedAmendments = findings.filter(
+    (f) => reviews[f.id]?.isEditApplied && f.suggestedEdit !== null
+  );
   const dismissedFindings = findings.filter((f) => reviews[f.id]?.status === 'dismissed');
   const pendingFindings = findings.filter((f) => !reviews[f.id] || reviews[f.id]?.status === 'pending');
 
@@ -57,11 +59,11 @@ export const ReviewSummaryModal: React.FC = () => {
     md += `- **Residual Risk Post-Review:** ${analytics.residualRiskScore}/100 (${analytics.riskLevel})\n`;
     md += `- **Review Status:** ${analytics.acceptedCount} Accepted, ${analytics.dismissedCount} Dismissed, ${analytics.pendingCount} Pending\n\n`;
 
-    md += `## 2. Schedule of Accepted Amendments & Counter-Proposals\n\n`;
-    if (acceptedFindings.length === 0) {
-      md += `*No amendments have been accepted yet.*\n\n`;
+    md += `## 2. Schedule of Applied Amendments & Counter-Proposals\n\n`;
+    if (appliedAmendments.length === 0) {
+      md += `*No amendments have been applied yet.*\n\n`;
     } else {
-      acceptedFindings.forEach((f) => {
+      appliedAmendments.forEach((f) => {
         md += `### [${f.id}] § ${f.anchor ? f.anchor.paragraphId.replace('p-', '') : 'Document-Wide'} — ${f.title}\n`;
         md += `- **Severity:** ${f.severity.toUpperCase()} | **Category:** ${f.category}\n`;
         md += `- **Issue:** ${f.explanation}\n`;
@@ -230,20 +232,20 @@ export const ReviewSummaryModal: React.FC = () => {
             </div>
           </div>
 
-          {/* Schedule of Accepted Amendments */}
+          {/* Schedule of Applied Amendments */}
           <div>
             <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              Schedule of Accepted Amendments ({acceptedFindings.length})
+              Schedule of Applied Amendments ({appliedAmendments.length})
             </h4>
 
-            {acceptedFindings.length === 0 ? (
+            {appliedAmendments.length === 0 ? (
               <p className="text-xs text-slate-400 italic p-3 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-dashed border-slate-200 dark:border-slate-800">
-                No amendments have been accepted yet. As you review findings, accepted replacement clauses will appear here.
+                No amendments have been applied yet. Accepting a finding does not apply its suggested text.
               </p>
             ) : (
               <div className="space-y-3">
-                {acceptedFindings.map((f) => (
+                {appliedAmendments.map((f) => (
                   <div
                     key={f.id}
                     className="p-3.5 rounded-xl border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50/30 dark:bg-emerald-950/20 text-xs space-y-2"

@@ -1,7 +1,11 @@
 import type { FindingSeverity } from './finding';
 
-export type DocumentReviewStatus = 'Pending Review' | 'In Progress' | 'Completed';
-export type DocumentRiskLevel = 'Critical' | 'High' | 'Moderate' | 'Low';
+export type DocumentReviewStatus =
+  | 'Pending Review'
+  | 'In Progress'
+  | 'Completed'
+  | 'Demo Only';
+export type DocumentRiskLevel = 'Critical' | 'High' | 'Moderate' | 'Low' | 'Unassessed';
 
 export interface DocumentItem {
   id: string;
@@ -26,7 +30,7 @@ export interface ActivityLogItem {
   id: string;
   documentId: string;
   documentName: string;
-  type: 'accept' | 'dismiss' | 'note' | 'amend' | 'upload' | 'revert';
+  type: 'accept' | 'dismiss' | 'note' | 'amend' | 'upload' | 'revert' | 'system';
   title: string;
   description: string;
   author: string;

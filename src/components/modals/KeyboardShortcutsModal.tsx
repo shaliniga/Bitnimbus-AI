@@ -10,7 +10,7 @@ export const KeyboardShortcutsModal: React.FC = () => {
   const shortcuts = [
     { key: 'J / ↓', label: 'Next Finding', desc: 'Advance focus to next finding' },
     { key: 'K / ↑', label: 'Previous Finding', desc: 'Move focus to previous finding' },
-    { key: 'A', label: 'Accept & Apply', desc: 'Accept finding / apply proposed edit' },
+    { key: 'A', label: 'Accept', desc: 'Accept finding without applying suggested text' },
     { key: 'D', label: 'Dismiss', desc: 'Dismiss finding as acceptable risk' },
     { key: 'Z', label: 'Toggle Zen Mode', desc: 'Switch to distraction-free Speed Review' },
     { key: '?', label: 'Shortcuts Help', desc: 'Open this keyboard reference cheatsheet' },

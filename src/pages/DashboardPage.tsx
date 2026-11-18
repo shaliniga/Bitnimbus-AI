@@ -49,7 +49,13 @@ export const DashboardPage: React.FC = () => {
 
   // Chart data: Risk Distribution across documents
   const riskDistributionData = useMemo(() => {
-    const counts = { Critical: 0, High: 0, Moderate: 0, Low: 0 };
+    const counts = {
+      Critical: 0,
+      High: 0,
+      Moderate: 0,
+      Low: 0,
+      Unassessed: 0,
+    };
     documents.forEach((d) => {
       counts[d.riskLevel] = (counts[d.riskLevel] || 0) + 1;
     });
@@ -59,6 +65,7 @@ export const DashboardPage: React.FC = () => {
       { name: 'High', count: counts.High, color: '#f59e0b' },
       { name: 'Moderate', count: counts.Moderate, color: '#3b82f6' },
       { name: 'Low', count: counts.Low, color: '#10b981' },
+      { name: 'Unassessed', count: counts.Unassessed, color: '#94a3b8' },
     ];
   }, [documents]);
 
@@ -81,11 +88,11 @@ export const DashboardPage: React.FC = () => {
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <span>Legal Operations Review Hub</span>
             <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
-              Live Copilot
+              Sample Data
             </span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Real-time AI contract risk triage, negotiation redlines, and compliance audit.
+            Review bundled MSA findings and track local portfolio metadata.
           </p>
         </div>
 
@@ -418,14 +425,23 @@ export const DashboardPage: React.FC = () => {
                 {documents.slice(0, 4).map((doc) => (
                   <tr
                     key={doc.id}
-                    onClick={() => navigate(`/review/${doc.id}`)}
-                    className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
+                    onClick={() => {
+                      if (doc.isPrimary) navigate(`/review/${doc.id}`);
+                    }}
+                    className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${
+                      doc.isPrimary ? 'cursor-pointer' : ''
+                    }`}
                   >
                     <td className="py-3 font-semibold text-slate-900 dark:text-slate-100">
                       <div className="flex items-center gap-2">
                         <FileText className="w-4 h-4 text-indigo-500 shrink-0" />
                         <div>
                           <span>{doc.name}</span>
+                          {!doc.isPrimary && (
+                            <span className="block text-[9px] text-slate-400 font-normal">
+                              Demo only - no contract data
+                            </span>
+                          )}
                           <span className="block text-[10px] text-slate-400 font-normal">
                             Uploaded {doc.uploadDate}
                           </span>
@@ -444,6 +460,8 @@ export const DashboardPage: React.FC = () => {
                             ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
                             : doc.riskLevel === 'Moderate'
                             ? 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
+                            : doc.riskLevel === 'Unassessed'
+                            ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
                             : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
                         }`}
                       >
@@ -466,13 +484,14 @@ export const DashboardPage: React.FC = () => {
                     <td className="py-3 text-right">
                       <button
                         type="button"
+                        disabled={!doc.isPrimary}
                         onClick={(e) => {
                           e.stopPropagation();
                           navigate(`/review/${doc.id}`);
                         }}
-                        className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white dark:bg-indigo-950/60 dark:text-indigo-300 dark:hover:bg-indigo-600 dark:hover:text-white transition-colors cursor-pointer"
+                        className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 hover:bg-indigo-600 text-indigo-700 hover:text-white dark:bg-indigo-950/60 dark:text-indigo-300 dark:hover:bg-indigo-600 dark:hover:text-white transition-colors cursor-pointer disabled:bg-slate-100 disabled:text-slate-400 disabled:hover:bg-slate-100 disabled:cursor-not-allowed dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
                       >
-                        Review
+                        {doc.isPrimary ? 'Review' : 'Demo only'}
                       </button>
                     </td>
                   </tr>

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { Header } from '../components/header/Header';
 import { DocumentMinimap } from '../components/document/DocumentMinimap';
 import { DocumentViewer } from '../components/document/DocumentViewer';
@@ -10,25 +10,51 @@ import { KeyboardShortcutsModal } from '../components/modals/KeyboardShortcutsMo
 import { ReviewSummaryModal } from '../components/modals/ReviewSummaryModal';
 import { useReviewStore } from '../store/useReviewStore';
 import { useKeyboardNavigation } from '../hooks/useKeyboardNavigation';
-import { FileText, SlidersHorizontal } from 'lucide-react';
+import { isSupportedReviewDocument } from '../utils/documentReview';
+import { ArrowLeft, FileText, SlidersHorizontal } from 'lucide-react';
 
 export const ReviewWorkspacePage = () => {
   const { documentId } = useParams<{ documentId: string }>();
-  // Mount keyboard shortcuts specifically for review workspace
-  useKeyboardNavigation();
-  const { zenMode, getDynamicDocuments } = useReviewStore();
+  const { zenMode, getDynamicDocuments, contract } = useReviewStore();
 
   const documents = getDynamicDocuments();
   const currentDoc = useMemo(() => {
-    return (
-      documents.find((d) => d.id === documentId) ||
-      documents.find((d) => d.isPrimary) ||
-      documents[0]
-    );
+    return documents.find((d) => d.id === documentId) ?? null;
   }, [documents, documentId]);
+  const isReviewSupported = isSupportedReviewDocument(
+    currentDoc,
+    documentId,
+    contract.id
+  );
+  useKeyboardNavigation(isReviewSupported);
 
   const [activeMobileTab, setActiveMobileTab] = useState<'document' | 'findings'>('document');
   const [showLeftSidebar, setShowLeftSidebar] = useState(true);
+
+  if (!isReviewSupported) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-100 p-6 text-slate-900">
+        <section className="max-w-lg rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <FileText className="mx-auto mb-4 h-8 w-8 text-slate-400" />
+          <h1 className="text-lg font-bold">
+            {currentDoc ? currentDoc.name : 'Document unavailable'}
+          </h1>
+          <p className="mt-2 text-sm text-slate-600">
+            {currentDoc
+              ? 'This is a demo portfolio entry. A contract and findings dataset are not available for review.'
+              : 'This document is not available in the current portfolio.'}
+          </p>
+          <Link
+            to="/documents"
+            className="mt-5 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to documents
+          </Link>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-100 text-slate-900 font-sans antialiased">

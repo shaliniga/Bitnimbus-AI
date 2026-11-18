@@ -40,7 +40,7 @@ export const Header: React.FC<HeaderProps> = ({
   const handleReset = () => {
     if (
       window.confirm(
-        'Are you sure you want to reset all review progress, accepted amendments, and notes for this agreement?'
+        'Are you sure you want to reset all review progress, applied amendments, and notes for this agreement?'
       )
     ) {
       resetAllReviews();
